@@ -7,8 +7,8 @@ import '../../../widgets/common/empty_state.dart';
 import '../../../widgets/common/error_message.dart';
 import '../../../widgets/common/loading.dart';
 
-class CounselorMessagesScreen extends StatelessWidget {
-  const CounselorMessagesScreen({required this.service, super.key});
+class CounselorNotesScreen extends StatelessWidget {
+  const CounselorNotesScreen({required this.service, super.key});
   final CounselorService service;
 
   @override

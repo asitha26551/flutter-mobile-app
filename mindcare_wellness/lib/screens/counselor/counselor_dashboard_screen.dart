@@ -5,7 +5,7 @@ import '../../services/counselor_service.dart';
 import 'counselor_theme.dart';
 import 'calendar/counselor_calendar_screen.dart';
 import 'home/counselor_home_screen.dart';
-import 'messages/counselor_messages_screen.dart';
+import 'notes/counselor_notes_screen.dart';
 import 'profile/counselor_profile_screen.dart';
 
 class CounselorDashboardScreen extends StatefulWidget {
@@ -30,7 +30,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
       children: [
         CounselorHomeScreen(service: service),
         CounselorCalendarScreen(service: service),
-        CounselorMessagesScreen(service: service),
+        CounselorNotesScreen(service: service),
         CounselorProfileScreen(
           service: service,
           authService: widget.authService,
