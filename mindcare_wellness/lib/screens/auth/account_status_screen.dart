@@ -8,12 +8,14 @@ class AccountStatusScreen extends StatelessWidget {
     required this.status,
     required this.authService,
     this.role = 'counselor',
+    this.rejectionReason,
     super.key,
   });
 
   final String status;
   final AuthService authService;
   final String role;
+  final String? rejectionReason;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +46,14 @@ class AccountStatusScreen extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.black54, height: 1.45),
           ),
+          if (!suspended && rejectionReason != null && rejectionReason!.trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(
+              'Reason: $rejectionReason',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.black54, height: 1.4),
+            ),
+          ],
           const SizedBox(height: 26),
           OutlinedButton.icon(
             onPressed: authService.logout,
