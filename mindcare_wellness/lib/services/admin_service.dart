@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../models/admin_action_model.dart';
+
 class AdminUserRecord {
   const AdminUserRecord({required this.data, this.roleData = const {}});
 
@@ -52,6 +54,14 @@ class AdminService {
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
+
+  Stream<List<AdminActionModel>> auditActions() => _firestore
+      .collection('admin_actions')
+      .orderBy('createdAt', descending: true)
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs.map(AdminActionModel.fromFirestore).toList(),
+      );
 
   Future<List<AdminUserRecord>> getUsers({required String role}) async {
     await _ensureAdminClaim();
@@ -184,7 +194,13 @@ class AdminService {
       'accountStatus': accountStatus,
       'updatedAt': now,
     });
-    _addAudit(batch, action, uid, 'counselor');
+    _addAudit(
+      batch,
+      action,
+      uid,
+      'counselor',
+      reason: fields['rejectionReason'] as String?,
+    );
     await batch.commit();
   }
 
@@ -213,13 +229,15 @@ class AdminService {
     WriteBatch batch,
     String action,
     String targetUserId,
-    String targetRole,
-  ) {
+    String targetRole, {
+    String? reason,
+  }) {
     batch.set(_firestore.collection('admin_actions').doc(), {
       'adminId': _adminUid,
       'action': action,
       'targetUserId': targetUserId,
       'targetRole': targetRole,
+      'reason': reason,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }

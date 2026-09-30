@@ -76,11 +76,13 @@ service cloud.firestore {
         || isApprovedCounselorWithId(resource.data.counselorId)
         || (isStudent() && resource.data.isAvailable == true)
       );
-      allow create: if isApprovedCounselorWithId(request.resource.data.counselorId)
-        && request.resource.data.isAvailable is bool;
-      allow update: if isApprovedCounselorWithId(resource.data.counselorId)
-        && request.resource.data.counselorId == resource.data.counselorId;
-      allow delete: if isApprovedCounselorWithId(resource.data.counselorId);
+      allow create: if isAdmin()
+        || (isApprovedCounselorWithId(request.resource.data.counselorId)
+        && request.resource.data.isAvailable is bool);
+      allow update: if isAdmin()
+        || (isApprovedCounselorWithId(resource.data.counselorId)
+        && request.resource.data.counselorId == resource.data.counselorId);
+      allow delete: if isAdmin() || isApprovedCounselorWithId(resource.data.counselorId);
     }
 
     match /appointments/{appointmentId} {
@@ -93,7 +95,13 @@ service cloud.firestore {
       allow create: if isStudent()
         && request.resource.data.studentId == request.auth.uid
         && request.resource.data.counselorId is string
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status == 'pending'
+        && request.resource.data.sessionType in ['chat', 'video', 'audio', 'in_person']
+        && request.resource.data.startAt is timestamp
+        && request.resource.data.endAt is timestamp
+        && request.resource.data.endAt > request.resource.data.startAt
+        && get(/databases/$(database)/documents/counselors/$(request.resource.data.counselorId)).data.verificationStatus == 'approved'
+        && get(/databases/$(database)/documents/counselors/$(request.resource.data.counselorId)).data.accountStatus == 'active';
       allow update: if isSignedIn() && (
         isAdmin()
         || (resource.data.studentId == request.auth.uid
@@ -115,8 +123,11 @@ service cloud.firestore {
         || resource.data.counselorId == request.auth.uid
       );
       allow create: if isSignedIn() && (
-        request.resource.data.studentId == request.auth.uid
-        || request.resource.data.counselorId == request.auth.uid
+        (request.resource.data.studentId == request.auth.uid
+          || request.resource.data.counselorId == request.auth.uid)
+        && request.resource.data.status in ['active', 'closed']
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.studentId == request.resource.data.studentId
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.counselorId == request.resource.data.counselorId
       );
       allow delete: if isAdmin();
     }
@@ -140,15 +151,21 @@ service cloud.firestore {
     }
 
     match /mood_entries/{entryId} {
-      allow read: if isSignedIn() && resource.data.studentId == request.auth.uid;
+      allow read: if isOwner(resource.data.studentId);
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.studentId == request.auth.uid;
+      allow update: if isSignedIn()
+        && isOwner(resource.data.studentId)
+        && request.resource.data.studentId == resource.data.studentId;
+      allow delete: if isOwner(resource.data.studentId);
     }
 
     match /journal_entries/{entryId} {
-      allow read: if isSignedIn() && resource.data.studentId == request.auth.uid;
+      allow read: if isOwner(resource.data.studentId);
       allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update, delete: if isSignedIn() && resource.data.studentId == request.auth.uid;
+      allow update: if isSignedIn()
+        && isOwner(resource.data.studentId)
+        && request.resource.data.studentId == resource.data.studentId;
+      allow delete: if isOwner(resource.data.studentId);
     }
 
     match /session_notes/{noteId} {
@@ -169,7 +186,10 @@ service cloud.firestore {
       allow create: if isAdmin()
         && request.resource.data.adminId == request.auth.uid
         && request.resource.data.targetUserId is string
-        && request.resource.data.action is string;
+          && request.resource.data.action in [
+            'approve_counselor', 'reject_counselor', 'suspend_counselor',
+            'reactivate_counselor', 'suspend_student', 'reactivate_student'
+          ];
       allow read: if isAdmin();
       allow update, delete: if false;
     }
@@ -186,6 +206,10 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
 
     function isStudent() {
@@ -236,14 +260,10 @@ service cloud.firestore {
     }
 
     function existingMessageParticipant() {
-      return resource.data.senderId == request.auth.uid
-        || resource.data.receiverId == request.auth.uid
-        || (
-          exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId))
-          && (
-            get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.studentId == request.auth.uid
-            || get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.counselorId == request.auth.uid
-          )
+      return exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId))
+        && (
+          get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.studentId == request.auth.uid
+          || get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.counselorId == request.auth.uid
         );
     }
   }
