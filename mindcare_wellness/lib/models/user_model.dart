@@ -13,6 +13,7 @@ class AppUser {
     this.createdAt,
     this.updatedAt,
     this.emailVerified = false,
+    this.rejectionReason,
   });
 
   final String uid;
@@ -26,8 +27,11 @@ class AppUser {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final bool emailVerified;
+  final String? rejectionReason;
 
-  factory AppUser.fromFirestore(DocumentSnapshot<Map<String, dynamic>> snapshot) {
+  factory AppUser.fromFirestore(
+    DocumentSnapshot<Map<String, dynamic>> snapshot,
+  ) {
     final data = snapshot.data() ?? <String, dynamic>{};
     return AppUser(
       uid: data['uid'] as String? ?? snapshot.id,
@@ -36,11 +40,13 @@ class AppUser {
       role: data['role'] as String? ?? 'student',
       accountStatus: data['accountStatus'] as String? ?? 'active',
       verificationStatus: data['verificationStatus'] as String?,
-      profileImage: data['profileImageUrl'] as String? ?? data['profileImage'] as String?,
+      profileImage:
+          data['profileImageUrl'] as String? ?? data['profileImage'] as String?,
       phoneNumber: data['phoneNumber'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
       emailVerified: data['emailVerified'] as bool? ?? false,
+      rejectionReason: data['rejectionReason'] as String?,
     );
   }
 
@@ -54,9 +60,12 @@ class AppUser {
       'verificationStatus': verificationStatus,
       'profileImage': profileImage,
       'phoneNumber': phoneNumber,
-      'createdAt': createdAt == null ? FieldValue.serverTimestamp() : Timestamp.fromDate(createdAt!),
+      'createdAt': createdAt == null
+          ? FieldValue.serverTimestamp()
+          : Timestamp.fromDate(createdAt!),
       'updatedAt': FieldValue.serverTimestamp(),
       'emailVerified': emailVerified,
+      'rejectionReason': rejectionReason,
     };
   }
 }

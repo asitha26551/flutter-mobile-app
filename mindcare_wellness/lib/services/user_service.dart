@@ -3,11 +3,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 
 class UserService {
-  UserService({FirebaseFirestore? firestore}) : _firestore = firestore ?? FirebaseFirestore.instance;
+  UserService({FirebaseFirestore? firestore})
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
-  CollectionReference<Map<String, dynamic>> get _users => _firestore.collection('users');
+  CollectionReference<Map<String, dynamic>> get _users =>
+      _firestore.collection('users');
 
   Future<void> createStudentProfile({
     required String uid,
@@ -65,7 +67,13 @@ class UserService {
     batch.set(_firestore.collection('counselors').doc(uid), {
       ...counselorData,
       'uid': uid,
+      'accountStatus': 'pending',
       'verificationStatus': 'pending',
+      'approvedAt': null,
+      'approvedBy': null,
+      'rejectedAt': null,
+      'rejectedBy': null,
+      'rejectionReason': null,
       'createdAt': now,
       'updatedAt': now,
     });

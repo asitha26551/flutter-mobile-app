@@ -5,8 +5,8 @@ import 'user_service.dart';
 
 class AuthService {
   AuthService({FirebaseAuth? auth, UserService? userService})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _userService = userService ?? UserService();
+    : _auth = auth ?? FirebaseAuth.instance,
+      _userService = userService ?? UserService();
 
   final FirebaseAuth _auth;
   final UserService _userService;
@@ -60,11 +60,20 @@ class AuthService {
     return credential;
   }
 
-  Future<UserCredential> _createAccount({required String email, required String password}) {
-    return _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
+  Future<UserCredential> _createAccount({
+    required String email,
+    required String password,
+  }) {
+    return _auth.createUserWithEmailAndPassword(
+      email: email.trim(),
+      password: password,
+    );
   }
 
-  Future<UserCredential> login({required String email, required String password}) {
+  Future<UserCredential> login({
+    required String email,
+    required String password,
+  }) {
     return _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
@@ -73,7 +82,8 @@ class AuthService {
 
   Future<void> logout() => _auth.signOut();
 
-  Future<void> resetPassword(String email) => _auth.sendPasswordResetEmail(email: email.trim());
+  Future<void> resetPassword(String email) =>
+      _auth.sendPasswordResetEmail(email: email.trim());
 
   Future<void> sendVerificationEmail() async {
     final user = _auth.currentUser;
@@ -95,7 +105,8 @@ class AuthService {
     return user?.emailVerified ?? false;
   }
 
-  Future<bool> hasProfile(String uid) async => (await _userService.getProfile(uid)) != null;
+  Future<bool> hasProfile(String uid) async =>
+      (await _userService.getProfile(uid)) != null;
 
   Future<AppUser?> getProfile(String uid) => _userService.getProfile(uid);
 }

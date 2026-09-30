@@ -57,6 +57,15 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /adminActions/{actionId} {
+      allow create: if isAdmin()
+        && request.resource.data.adminId == request.auth.uid
+        && request.resource.data.targetUserId is string
+        && request.resource.data.action is string;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
     function isSignedIn() {
       return request.auth != null;
     }

@@ -33,7 +33,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _busy = true);
     try {
-      await _authService.login(email: _emailController.text, password: _passwordController.text);
+      await _authService.login(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
     } catch (error) {
       if (mounted) _showMessage(authErrorMessage(error), isError: true);
     } finally {
@@ -42,10 +45,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(message),
-      backgroundColor: isError ? Colors.red.shade700 : primaryGreen,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red.shade700 : primaryGreen,
+      ),
+    );
   }
 
   @override
@@ -58,25 +63,120 @@ class _LoginScreenState extends State<LoginScreen> {
           children: [
             const BrandMark(),
             const SizedBox(height: 18),
-            Text('MINDCARE WELLNESS', textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: primaryGreen, fontWeight: FontWeight.w800, letterSpacing: 1.1)),
+            Text(
+              'MINDCARE WELLNESS',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: primaryGreen,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.1,
+              ),
+            ),
             const SizedBox(height: 5),
-            Text('Welcome back', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
+            Text(
+              'Welcome back',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 7),
-            Text('Access confidential counseling and care', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.black54)),
+            Text(
+              'Access confidential counseling and care',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium
+                  ?.copyWith(color: Colors.black54),
+            ),
             const SizedBox(height: 30),
-            AuthTextField(controller: _emailController, label: 'Email address', hint: 'you@example.com', icon: Icons.mail_outline_rounded, keyboardType: TextInputType.emailAddress, validator: emailValue),
+            AuthTextField(
+              controller: _emailController,
+              label: 'Email address',
+              hint: 'you@example.com',
+              icon: Icons.mail_outline_rounded,
+              keyboardType: TextInputType.emailAddress,
+              validator: emailValue,
+            ),
             const SizedBox(height: 15),
-            AuthTextField(controller: _passwordController, label: 'Password', hint: 'Enter your password', icon: Icons.lock_outline_rounded, obscureText: _obscurePassword, onToggleObscure: () => setState(() => _obscurePassword = !_obscurePassword), validator: (value) => requiredValue(value, 'Password is required')),
-            Align(alignment: Alignment.centerRight, child: TextButton(onPressed: _busy ? null : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ForgotPasswordScreen())), child: const Text('Forgot password?'))),
+            AuthTextField(
+              controller: _passwordController,
+              label: 'Password',
+              hint: 'Enter your password',
+              icon: Icons.lock_outline_rounded,
+              obscureText: _obscurePassword,
+              onToggleObscure: () =>
+                  setState(() => _obscurePassword = !_obscurePassword),
+              validator: (value) =>
+                  requiredValue(value, 'Password is required'),
+            ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPasswordScreen(),
+                        ),
+                      ),
+                child: const Text('Forgot password?'),
+              ),
+            ),
             PrimaryButton(label: 'LOG IN', onPressed: _login, busy: _busy),
             const SizedBox(height: 26),
-            Row(children: [const Expanded(child: Divider()), Padding(padding: const EdgeInsets.symmetric(horizontal: 12), child: Text('OR', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.black45))), const Expanded(child: Divider())]),
+            Row(
+              children: [
+                const Expanded(child: Divider()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Text(
+                    'OR',
+                    style: Theme.of(context).textTheme.labelSmall
+                        ?.copyWith(color: Colors.black45),
+                  ),
+                ),
+                const Expanded(child: Divider()),
+              ],
+            ),
             const SizedBox(height: 18),
-            OutlinedButton.icon(onPressed: null, icon: const Icon(Icons.g_mobiledata, size: 25), label: const Text('Continue with Google')),
+            OutlinedButton.icon(
+              onPressed: null,
+              icon: const Icon(Icons.g_mobiledata, size: 25),
+              label: const Text('Continue with Google'),
+            ),
             const SizedBox(height: 22),
-            Center(child: Text.rich(TextSpan(text: "Don't have an account? ", children: [WidgetSpan(child: GestureDetector(onTap: _busy ? null : () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())), child: const Text('Create account', style: TextStyle(color: primaryGreen, fontWeight: FontWeight.w700))))]))),
+            Center(
+              child: Text.rich(
+                TextSpan(
+                  text: "Don't have an account? ",
+                  children: [
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: _busy
+                            ? null
+                            : () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen(),
+                                ),
+                              ),
+                        child: const Text(
+                          'Create account',
+                          style: TextStyle(
+                            color: primaryGreen,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 30),
-            Text('100% confidential  •  Secure care network', textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.black45)),
+            Text(
+              '100% confidential  •  Secure care network',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.labelSmall
+                  ?.copyWith(color: Colors.black45),
+            ),
           ],
         ),
       ),
