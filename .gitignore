@@ -1,0 +1,145 @@
+# ============================================================
+
+# Flutter / Dart
+
+# ============================================================
+
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Flutter generated files
+
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+
+# ============================================================
+
+# Android
+
+# ============================================================
+
+# Local Android SDK configuration
+
+android/local.properties
+
+# Android build files
+
+android/app/build/
+android/.gradle/
+android/build/
+android/captures/
+
+# Android signing / private keys
+
+*.jks
+*.keystore
+key.properties
+
+# ============================================================
+
+# iOS
+
+# ============================================================
+
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+
+# Xcode
+
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# ============================================================
+
+# IDE - Android Studio / IntelliJ
+
+# ============================================================
+
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# ============================================================
+
+# VS Code
+
+# ============================================================
+
+.vscode/
+
+# If you want to share VS Code settings with your team,
+
+# remove the .vscode/ line above and commit only selected
+
+# workspace configuration files.
+
+# ============================================================
+
+# Firebase
+
+# ============================================================
+
+firebase-debug.log
+firebase-debug.*.log
+
+# Firebase service-account/private credential files
+
+firebase-adminsdk-*.json
+service-account*.json
+
+# ============================================================
+
+# Environment / Secrets
+
+# ============================================================
+
+.env
+.env.*
+!.env.example
+
+# Private credentials
+
+secrets/
+credentials/
+*.pem
+*.p12
+*.pfx
+
+# ============================================================
+
+# Logs
+
+# ============================================================
+
+*.log
+
+# ============================================================
+
+# OS generated files
+
+# ============================================================
+
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+
+# Temporary files
+
+# ============================================================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
