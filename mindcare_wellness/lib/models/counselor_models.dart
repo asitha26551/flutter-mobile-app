@@ -20,8 +20,10 @@ class CounselorAppointment {
 
   String get status => data['status'] as String? ?? 'pending';
   String get studentId => data['studentId'] as String? ?? data['userId'] as String? ?? '';
+  String get counselorId => data['counselorId'] as String? ?? '';
   String get sessionType => data['sessionType'] as String? ?? data['type'] as String? ?? 'Counseling session';
   DateTime? get startAt => _date(data['startAt'] ?? data['appointmentDate']);
+  DateTime? get endAt => _date(data['endAt']);
 
   static DateTime? _date(Object? value) {
     if (value is Timestamp) return value.toDate();

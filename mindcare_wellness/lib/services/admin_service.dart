@@ -116,6 +116,9 @@ class AdminService {
     fields: {
       'approvedBy': _adminUid,
       'approvedAt': FieldValue.serverTimestamp(),
+      'rejectedBy': null,
+      'rejectedAt': null,
+      'rejectionReason': null,
     },
     action: 'approve_counselor',
   );
@@ -123,22 +126,28 @@ class AdminService {
   Future<void> rejectCounselor(String uid, String reason) => _updateCounselor(
     uid,
     status: 'rejected',
-    accountStatus: 'rejected',
+    accountStatus: 'pending',
     fields: {
       'rejectedBy': _adminUid,
       'rejectedAt': FieldValue.serverTimestamp(),
       'rejectionReason': reason.trim(),
+      'approvedBy': null,
+      'approvedAt': null,
     },
     action: 'reject_counselor',
   );
 
   Future<void> suspendUser(AdminUserRecord user) =>
-      _updateStatus(user, 'suspended', 'suspend_user');
+      _updateStatus(
+        user,
+        'suspended',
+        user.role == 'counselor' ? 'suspend_counselor' : 'suspend_student',
+      );
 
   Future<void> reactivateUser(AdminUserRecord user) => _updateStatus(
     user,
     user.role == 'counselor' ? 'active' : 'active',
-    'reactivate_user',
+    user.role == 'counselor' ? 'reactivate_counselor' : 'reactivate_student',
   );
 
   String get _adminUid => _auth.currentUser?.uid ?? '';
@@ -154,6 +163,9 @@ class AdminService {
     final batch = _firestore.batch();
     final userReference = _users.doc(uid);
     final counselorReference = _firestore.collection('counselors').doc(uid);
+    final publicCounselorReference = _firestore
+      .collection('counselor_public')
+      .doc(uid);
     final now = FieldValue.serverTimestamp();
     batch.update(userReference, {
       'verificationStatus': status,
@@ -166,6 +178,11 @@ class AdminService {
       'accountStatus': accountStatus,
       'updatedAt': now,
       ...fields,
+    });
+    batch.update(publicCounselorReference, {
+      'verificationStatus': status,
+      'accountStatus': accountStatus,
+      'updatedAt': now,
     });
     _addAudit(batch, action, uid, 'counselor');
     await batch.commit();
@@ -198,12 +215,12 @@ class AdminService {
     String targetUserId,
     String targetRole,
   ) {
-    batch.set(_firestore.collection('adminActions').doc(), {
+    batch.set(_firestore.collection('admin_actions').doc(), {
       'adminId': _adminUid,
       'action': action,
       'targetUserId': targetUserId,
       'targetRole': targetRole,
-      'timestamp': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
