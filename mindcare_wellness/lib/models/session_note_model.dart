@@ -8,9 +8,7 @@ class SessionNoteModel {
     required this.appointmentId,
     required this.studentId,
     required this.counselorId,
-    required this.summary,
-    required this.observations,
-    required this.followUpPlan,
+    required this.note,
     this.createdAt,
     this.updatedAt,
   });
@@ -19,9 +17,7 @@ class SessionNoteModel {
   final String appointmentId;
   final String studentId;
   final String counselorId;
-  final String summary;
-  final String observations;
-  final String followUpPlan;
+  final String note;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -32,21 +28,25 @@ class SessionNoteModel {
       appointmentId: data['appointmentId'] as String? ?? '',
       studentId: data['studentId'] as String? ?? '',
       counselorId: data['counselorId'] as String? ?? '',
-      summary: data['summary'] as String? ?? '',
-      observations: data['observations'] as String? ?? '',
-      followUpPlan: data['followUpPlan'] as String? ?? '',
+      note: data['note'] as String? ?? _legacyNote(data),
       createdAt: firestoreDate(data['createdAt']),
       updatedAt: firestoreDate(data['updatedAt']),
     );
   }
 
+  String get summary => note;
+
+  static String _legacyNote(Map<String, dynamic> data) => [
+    data['summary'] as String? ?? '',
+    data['observations'] as String? ?? '',
+    data['followUpPlan'] as String? ?? '',
+  ].where((value) => value.trim().isNotEmpty).join('\n\n');
+
   Map<String, dynamic> toFirestore() => {
     'appointmentId': appointmentId,
     'studentId': studentId,
     'counselorId': counselorId,
-    'summary': summary,
-    'observations': observations,
-    'followUpPlan': followUpPlan,
+    'note': note,
     'createdAt': firestoreTimestamp(createdAt) ?? FieldValue.serverTimestamp(),
     'updatedAt': FieldValue.serverTimestamp(),
   };

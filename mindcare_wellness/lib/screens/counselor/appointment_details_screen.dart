@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../models/appointment_model.dart';
 import '../../models/counselor_models.dart';
+import '../../models/session_note_model.dart';
 import '../../services/appointment_service.dart';
 import '../../services/counselor_service.dart';
+import '../../services/session_note_service.dart';
 import 'counselor_helpers.dart';
 import 'counselor_theme.dart';
+import 'notes/add_session_note_screen.dart';
+import 'notes/session_note_details_screen.dart';
 
 class AppointmentDetailsScreen extends StatelessWidget {
   const AppointmentDetailsScreen({
@@ -101,6 +106,10 @@ class AppointmentDetailsScreen extends StatelessWidget {
             label: const Text('Mark no show'),
           ),
         ],
+        if (item.status == 'completed') ...[
+          const SizedBox(height: 22),
+          _SessionNoteAction(item: item),
+        ],
       ],
     ),
   );
@@ -108,6 +117,48 @@ class AppointmentDetailsScreen extends StatelessWidget {
   Future<void> _update(BuildContext context, String status) async {
     await AppointmentService().updateCounselorStatus(item.id, status);
     if (context.mounted) Navigator.pop(context);
+  }
+}
+
+class _SessionNoteAction extends StatelessWidget {
+  const _SessionNoteAction({required this.item});
+  final CounselorAppointment item;
+
+  @override
+  Widget build(BuildContext context) {
+    final appointment = AppointmentModel.fromMap(item.id, item.data);
+    return StreamBuilder<List<SessionNoteModel>>(
+      stream: SessionNoteService().forAppointment(item.id),
+      builder: (context, snapshot) {
+        final notes = snapshot.data ?? const [];
+        if (notes.isEmpty) {
+          return FilledButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddSessionNoteScreen(appointment: item),
+              ),
+            ),
+            icon: const Icon(Icons.note_add_outlined),
+            label: const Text('Add Session Note'),
+          );
+        }
+        final note = notes.first;
+        return OutlinedButton.icon(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SessionNoteDetailsScreen(
+                entry: SessionNoteEntry(note: note, appointment: appointment),
+                appointmentOverride: appointment,
+              ),
+            ),
+          ),
+          icon: const Icon(Icons.sticky_note_2_outlined),
+          label: const Text('View Session Note'),
+        );
+      },
+    );
   }
 }
 

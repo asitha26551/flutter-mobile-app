@@ -58,6 +58,25 @@ class AppointmentModel {
     );
   }
 
+  factory AppointmentModel.fromMap(String id, Map<String, dynamic> data) =>
+      AppointmentModel(
+        id: id,
+        studentId: data['studentId'] as String? ?? data['userId'] as String? ?? '',
+        counselorId: data['counselorId'] as String? ?? '',
+        startAt: firestoreDate(data['startAt'] ?? data['appointmentDate']),
+        endAt: firestoreDate(data['endAt']),
+        sessionType: data['sessionType'] as String? ?? data['type'] as String? ?? 'chat',
+        status: data['status'] as String? ?? 'pending',
+        reason: data['reason'] as String?,
+        meetingLink: data['meetingLink'] as String?,
+        location: data['location'] as String?,
+        studentNotes: data['studentNotes'] as String?,
+        cancellationReason: data['cancellationReason'] as String?,
+        cancelledBy: data['cancelledBy'] as String?,
+        createdAt: firestoreDate(data['createdAt']),
+        updatedAt: firestoreDate(data['updatedAt']),
+      );
+
   Map<String, dynamic> toFirestore() => {
     'studentId': studentId,
     'counselorId': counselorId,
