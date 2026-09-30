@@ -119,14 +119,19 @@ class CounselorHomeScreen extends StatelessWidget {
                     onCalendar: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) =>
-                            CounselorCalendarScreen(service: service),
+                        builder: (_) => Scaffold(
+                          backgroundColor: dashboardMint,
+                          body: CounselorCalendarScreen(service: service),
+                        ),
                       ),
                     ),
                     onNotes: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => CounselorNotesScreen(service: service),
+                        builder: (_) => Scaffold(
+                          backgroundColor: dashboardMint,
+                          body: CounselorNotesScreen(service: service),
+                        ),
                       ),
                     ),
                   ),
