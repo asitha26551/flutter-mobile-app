@@ -25,8 +25,9 @@ class _CounselorReviewScreenState extends State<CounselorReviewScreen> {
       'Approve counselor?',
       'This grants access to counselor functionality.',
     );
-    if (confirmed)
+    if (confirmed) {
       await _run(() => widget.adminService.approveCounselor(widget.user.uid));
+    }
   }
 
   Future<void> _reject() async {
@@ -106,10 +107,11 @@ class _CounselorReviewScreenState extends State<CounselorReviewScreen> {
       await operation();
       if (mounted) Navigator.pop(context);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not update application: $error')),
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

@@ -17,12 +17,14 @@ class CounselorNotesScreen extends StatelessWidget {
     child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: service.conversations(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting)
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const LoadingWidget();
-        if (snapshot.hasError)
+        }
+        if (snapshot.hasError) {
           return const ErrorMessage(
             message: 'Notes are unavailable right now.',
           );
+        }
         final docs = snapshot.data?.docs ?? [];
         return ListView(
           padding: EdgeInsets.zero,

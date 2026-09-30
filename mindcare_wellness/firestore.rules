@@ -223,8 +223,7 @@ service cloud.firestore {
     function isApprovedCounselor() {
       return isCounselor()
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountStatus == 'active'
-        && get(/databases/$(database)/documents/counselors/$(request.auth.uid)).data.verificationStatus == 'approved'
-        && get(/databases/$(database)/documents/counselors/$(request.auth.uid)).data.accountStatus == 'active';
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verificationStatus == 'approved';
     }
 
     function isApprovedCounselorWithId(counselorId) {

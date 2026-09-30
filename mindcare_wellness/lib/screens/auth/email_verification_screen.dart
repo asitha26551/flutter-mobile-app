@@ -49,8 +49,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   Future<void> _resend() async {
     try {
       await widget.authService.sendVerificationEmail();
-      if (mounted)
+      if (mounted) {
         setState(() => _message = 'A new verification email has been sent.');
+      }
     } catch (error) {
       if (mounted) setState(() => _message = authErrorMessage(error));
     }

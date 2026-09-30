@@ -132,8 +132,9 @@ String? requiredValue(String? value, String message) {
 
 String? emailValue(String? value) {
   if (value == null || value.trim().isEmpty) return 'Email is required';
-  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim()))
+  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim())) {
     return 'Enter a valid email';
+  }
   return null;
 }
 

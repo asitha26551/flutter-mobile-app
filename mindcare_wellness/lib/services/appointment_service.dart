@@ -11,16 +11,21 @@ class AppointmentService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
-  String get uid => _auth.currentUser?.uid ?? (throw StateError('You must be signed in.'));
+  String get uid =>
+      _auth.currentUser?.uid ?? (throw StateError('You must be signed in.'));
 
   Stream<List<AppointmentModel>> forStudent() => _query('studentId', uid);
   Stream<List<AppointmentModel>> forCounselor() => _query('counselorId', uid);
 
-  Stream<List<AppointmentModel>> _query(String field, String value) => _firestore
-      .collection('appointments')
-      .where(field, isEqualTo: value)
-      .snapshots()
-      .map((snapshot) => snapshot.docs.map(AppointmentModel.fromFirestore).toList());
+  Stream<List<AppointmentModel>> _query(String field, String value) =>
+      _firestore
+          .collection('appointments')
+          .where(field, isEqualTo: value)
+          .snapshots()
+          .map(
+            (snapshot) =>
+                snapshot.docs.map(AppointmentModel.fromFirestore).toList(),
+          );
 
   Future<String> create({
     required String counselorId,
@@ -56,11 +61,13 @@ class AppointmentService {
   Future<void> complete(String id) => _updateCounselorStatus(id, 'completed');
   Future<void> markNoShow(String id) => _updateCounselorStatus(id, 'no_show');
 
-  Future<void> _updateCounselorStatus(String id, String status) =>
-      _firestore.collection('appointments').doc(id).update({
-        'status': status,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+  Future<void> updateCounselorStatus(String id, String status) =>
+      _updateCounselorStatus(id, status);
+
+  Future<void> _updateCounselorStatus(String id, String status) => _firestore
+      .collection('appointments')
+      .doc(id)
+      .update({'status': status, 'updatedAt': FieldValue.serverTimestamp()});
 
   Future<void> cancel(String id, {required String reason}) =>
       _firestore.collection('appointments').doc(id).update({
