@@ -80,7 +80,11 @@ class AuthTextField extends StatelessWidget {
             : IconButton(
                 tooltip: obscureText ? 'Show password' : 'Hide password',
                 onPressed: onToggleObscure,
-                icon: Icon(obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                icon: Icon(
+                  obscureText
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
               ),
       ),
     );
@@ -88,7 +92,12 @@ class AuthTextField extends StatelessWidget {
 }
 
 class PrimaryButton extends StatelessWidget {
-  const PrimaryButton({required this.label, required this.onPressed, this.busy = false, super.key});
+  const PrimaryButton({
+    required this.label,
+    required this.onPressed,
+    this.busy = false,
+    super.key,
+  });
 
   final String label;
   final VoidCallback? onPressed;
@@ -102,7 +111,14 @@ class PrimaryButton extends StatelessWidget {
       child: FilledButton(
         onPressed: busy ? null : onPressed,
         child: busy
-            ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
             : Text(label),
       ),
     );
@@ -116,7 +132,8 @@ String? requiredValue(String? value, String message) {
 
 String? emailValue(String? value) {
   if (value == null || value.trim().isEmpty) return 'Email is required';
-  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim())) return 'Enter a valid email';
+  if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(value.trim()))
+    return 'Enter a valid email';
   return null;
 }
 
