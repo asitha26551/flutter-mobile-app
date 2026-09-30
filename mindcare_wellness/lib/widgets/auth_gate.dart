@@ -2,9 +2,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../models/user_model.dart';
+import '../screens/auth/account_status_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../screens/auth/login_screen.dart';
-import '../screens/client/client_home_screen.dart';
+import '../screens/auth/pending_counselor_screen.dart';
+import '../screens/counselor/counselor_dashboard_screen.dart';
+import '../screens/student/student_home_screen.dart';
 import '../services/auth_service.dart';
 import 'auth_widgets.dart';
 
@@ -29,7 +32,12 @@ class AuthGate extends StatelessWidget {
             if (profileSnapshot.connectionState == ConnectionState.waiting) return const _LoadingScreen();
             final profile = profileSnapshot.data;
             if (profile == null) return _MissingProfileScreen(authService: service);
-            if (profile.role == 'client') return ClientHomeScreen(authService: service);
+            if ((profile.role == 'student' || profile.role == 'client') && profile.accountStatus == 'active') return StudentHomeScreen(authService: service);
+            if (profile.role == 'counselor') {
+              if (profile.accountStatus == 'pending') return PendingCounselorScreen(authService: service);
+              if (profile.accountStatus == 'approved') return CounselorDashboardScreen(authService: service);
+              return AccountStatusScreen(status: profile.accountStatus, authService: service);
+            }
             return _RoleUnavailableScreen(role: profile.role, authService: service);
           },
         );

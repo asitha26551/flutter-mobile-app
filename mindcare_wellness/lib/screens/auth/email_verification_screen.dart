@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
 import '../../widgets/auth_widgets.dart';
+import '../../widgets/auth_gate.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   const EmailVerificationScreen({required this.authService, super.key});
@@ -21,7 +22,11 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     try {
       final verified = await widget.authService.isEmailVerified();
       if (!mounted) return;
-      setState(() => _message = verified ? 'Email verified. Loading your account...' : 'Not verified yet. Open the email link, then try again.');
+      if (verified) {
+        Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => AuthGate(authService: widget.authService)), (route) => false);
+      } else {
+        setState(() => _message = 'Not verified yet. Open the email link, then try again.');
+      }
     } catch (error) {
       if (mounted) setState(() => _message = authErrorMessage(error));
     } finally {

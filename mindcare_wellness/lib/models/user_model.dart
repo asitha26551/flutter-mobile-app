@@ -6,6 +6,8 @@ class AppUser {
     required this.fullName,
     required this.email,
     required this.role,
+    required this.accountStatus,
+    this.verificationStatus,
     this.profileImage,
     this.phoneNumber,
     this.createdAt,
@@ -17,6 +19,8 @@ class AppUser {
   final String fullName;
   final String email;
   final String role;
+  final String accountStatus;
+  final String? verificationStatus;
   final String? profileImage;
   final String? phoneNumber;
   final DateTime? createdAt;
@@ -29,8 +33,10 @@ class AppUser {
       uid: data['uid'] as String? ?? snapshot.id,
       fullName: data['fullName'] as String? ?? '',
       email: data['email'] as String? ?? '',
-      role: data['role'] as String? ?? 'client',
-      profileImage: data['profileImage'] as String?,
+      role: data['role'] as String? ?? 'student',
+      accountStatus: data['accountStatus'] as String? ?? 'active',
+      verificationStatus: data['verificationStatus'] as String?,
+      profileImage: data['profileImageUrl'] as String? ?? data['profileImage'] as String?,
       phoneNumber: data['phoneNumber'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
       updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
@@ -44,6 +50,8 @@ class AppUser {
       'fullName': fullName,
       'email': email,
       'role': role,
+      'accountStatus': accountStatus,
+      'verificationStatus': verificationStatus,
       'profileImage': profileImage,
       'phoneNumber': phoneNumber,
       'createdAt': createdAt == null ? FieldValue.serverTimestamp() : Timestamp.fromDate(createdAt!),

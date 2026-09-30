@@ -3,21 +3,66 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow create: if isSignedIn()
         && request.auth.uid == userId
         && request.resource.data.uid == userId
-        && request.resource.data.role == 'client'
-        && request.resource.data.email == request.auth.token.email;
-      allow update: if isSignedIn()
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.emailVerified == false
+        && ((request.resource.data.role == 'student' && request.resource.data.accountStatus == 'active')
+          || (request.resource.data.role == 'counselor' && request.resource.data.accountStatus == 'pending' && request.resource.data.verificationStatus == 'pending'));
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.accountStatus == resource.data.accountStatus
+          && request.resource.data.verificationStatus == resource.data.verificationStatus
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.email == resource.data.email
+          && (request.resource.data.emailVerified == resource.data.emailVerified || request.resource.data.emailVerified == request.auth.token.email_verified)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'phoneNumber', 'whatsappNumber', 'alternativePhone', 'profileImageUrl', 'updatedAt', 'emailVerified']));
+      allow delete: if isAdmin();
+    }
+
+    match /students/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn()
         && request.auth.uid == userId
-        && request.resource.data.uid == resource.data.uid
-        && request.resource.data.role == resource.data.role;
-      allow delete: if false;
+        && getAfter(/databases/$(database)/documents/users/$(userId)).data.role == 'student'
+        && request.resource.data.uid == userId;
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentId', 'faculty', 'department', 'degreeProgram', 'academicYear', 'intake', 'phoneNumber', 'whatsappNumber', 'alternativePhone', 'profileImageUrl', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    match /counselors/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && getAfter(/databases/$(database)/documents/users/$(userId)).data.role == 'counselor'
+        && request.resource.data.uid == userId
+        && request.resource.data.verificationStatus == 'pending';
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.verificationStatus == resource.data.verificationStatus
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['staffId', 'department', 'qualification', 'qualificationInstitution', 'registrationNumber', 'registrationBody', 'specializations', 'yearsOfExperience', 'professionalBio', 'languages', 'officeLocation', 'sessionTypes', 'phoneNumber', 'whatsappNumber', 'alternativePhone', 'profileImageUrl', 'updatedAt']));
+      allow delete: if isAdmin();
     }
 
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
     }
   }
 }

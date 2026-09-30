@@ -14,21 +14,20 @@ class AuthService {
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
-  Future<UserCredential> register({
+  Future<UserCredential> registerStudent({
     required String fullName,
     required String email,
     required String password,
+    required Map<String, dynamic> studentData,
   }) async {
-    final credential = await _auth.createUserWithEmailAndPassword(
-      email: email.trim(),
-      password: password,
-    );
+    final credential = await _createAccount(email: email, password: password);
     final user = credential.user!;
     try {
-      await _userService.createClientProfile(
+      await _userService.createStudentProfile(
         uid: user.uid,
         fullName: fullName,
         email: user.email ?? email,
+        studentData: studentData,
       );
     } catch (_) {
       await user.delete();
@@ -36,6 +35,33 @@ class AuthService {
     }
     await user.sendEmailVerification();
     return credential;
+  }
+
+  Future<UserCredential> registerCounselor({
+    required String fullName,
+    required String email,
+    required String password,
+    required Map<String, dynamic> counselorData,
+  }) async {
+    final credential = await _createAccount(email: email, password: password);
+    final user = credential.user!;
+    try {
+      await _userService.createCounselorProfile(
+        uid: user.uid,
+        fullName: fullName,
+        email: user.email ?? email,
+        counselorData: counselorData,
+      );
+    } catch (_) {
+      await user.delete();
+      rethrow;
+    }
+    await user.sendEmailVerification();
+    return credential;
+  }
+
+  Future<UserCredential> _createAccount({required String email, required String password}) {
+    return _auth.createUserWithEmailAndPassword(email: email.trim(), password: password);
   }
 
   Future<UserCredential> login({required String email, required String password}) {
@@ -62,6 +88,10 @@ class AuthService {
 
   Future<bool> isEmailVerified() async {
     final user = await reloadUser();
+    if (user?.emailVerified == true) {
+      await user!.getIdToken(true);
+      await _userService.markEmailVerified(user.uid);
+    }
     return user?.emailVerified ?? false;
   }
 
