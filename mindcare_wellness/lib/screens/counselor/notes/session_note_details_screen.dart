@@ -51,14 +51,24 @@ class SessionNoteDetailsScreen extends StatelessWidget {
             title: 'Session information',
             child: Column(
               children: [
-                _InfoLine(label: 'Date', value: _date(appointment?.startAt ?? entry.note.createdAt)),
+                _InfoLine(
+                  label: 'Date',
+                  value: _date(appointment?.startAt ?? entry.note.createdAt),
+                ),
                 _InfoLine(label: 'Time', value: _timeRange(appointment)),
-                _InfoLine(label: 'Session type', value: _sessionType(appointment?.sessionType)),
-                const _InfoLine(label: 'Appointment status', value: 'Completed'),
+                _InfoLine(
+                  label: 'Session type',
+                  value: _sessionType(appointment?.sessionType),
+                ),
+                const _InfoLine(
+                  label: 'Appointment status',
+                  value: 'Completed',
+                ),
               ],
             ),
           ),
-          if (appointment?.reason?.isNotEmpty == true || appointment?.studentNotes?.isNotEmpty == true) ...[
+          if (appointment?.reason?.isNotEmpty == true ||
+              appointment?.studentNotes?.isNotEmpty == true) ...[
             const SizedBox(height: 14),
             _Section(
               title: 'Student-provided information',
@@ -66,9 +76,15 @@ class SessionNoteDetailsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (appointment?.reason?.isNotEmpty == true)
-                    _LabeledText(label: 'Reason for appointment', text: appointment!.reason!),
+                    _LabeledText(
+                      label: 'Reason for appointment',
+                      text: appointment!.reason!,
+                    ),
                   if (appointment?.studentNotes?.isNotEmpty == true)
-                    _LabeledText(label: 'Student notes', text: appointment!.studentNotes!),
+                    _LabeledText(
+                      label: 'Student notes',
+                      text: appointment!.studentNotes!,
+                    ),
                 ],
               ),
             ),
@@ -79,22 +95,52 @@ class SessionNoteDetailsScreen extends StatelessWidget {
             trailing: const _PrivateBadge(),
             child: Text(
               entry.note.note.isEmpty ? 'No note content.' : entry.note.note,
-              style: const TextStyle(color: dashboardInk, height: 1.5, fontSize: 16),
+              style: const TextStyle(
+                color: dashboardInk,
+                height: 1.5,
+                fontSize: 16,
+              ),
             ),
           ),
           if (previousEntries.isNotEmpty) ...[
             const SizedBox(height: 22),
-            const Text('Previous sessions', style: TextStyle(color: dashboardInk, fontSize: 17, fontWeight: FontWeight.w800)),
+            const Text(
+              'Previous sessions',
+              style: TextStyle(
+                color: dashboardInk,
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(height: 8),
             ...previousEntries.map(
               (previous) => ListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(_date(previous.note.createdAt), style: const TextStyle(fontWeight: FontWeight.w700)),
-                subtitle: Text(_preview(previous.note.note), maxLines: 1, overflow: TextOverflow.ellipsis),
+                leading: const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: dashboardMint,
+                  child: Icon(Icons.history, color: dashboardGreen, size: 18),
+                ),
+                title: Text(
+                  _sessionTitle(previous),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: Text(
+                  '${_date(previous.appointment?.startAt ?? previous.note.createdAt)}  •  ${_sessionType(previous.appointment?.sessionType)}\n${_preview(previous.note.note)}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (_) => SessionNoteDetailsScreen(entry: previous)),
+                  MaterialPageRoute(
+                    builder: (_) => SessionNoteDetailsScreen(
+                      entry: previous,
+                      previousEntries: previousEntries
+                          .where((item) => item.note.id != previous.note.id)
+                          .toList(),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -106,7 +152,11 @@ class SessionNoteDetailsScreen extends StatelessWidget {
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.child, this.trailing = const SizedBox.shrink()});
+  const _Section({
+    required this.title,
+    required this.child,
+    this.trailing = const SizedBox.shrink(),
+  });
   final String title;
   final Widget child;
   final Widget trailing;
@@ -120,7 +170,16 @@ class _Section extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(title, style: const TextStyle(color: dashboardInk, fontSize: 15, fontWeight: FontWeight.w800))),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: dashboardInk,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
               trailing,
             ],
           ),
@@ -143,8 +202,22 @@ class _InfoLine extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 108, child: Text(label, style: const TextStyle(color: Colors.black54, fontSize: 12))),
-        Expanded(child: Text(value, style: const TextStyle(color: dashboardInk, fontWeight: FontWeight.w700))),
+        SizedBox(
+          width: 108,
+          child: Text(
+            label,
+            style: const TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: dashboardInk,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
       ],
     ),
   );
@@ -161,7 +234,14 @@ class _LabeledText extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w700)),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         const SizedBox(height: 4),
         Text(text, style: const TextStyle(color: dashboardInk, height: 1.35)),
       ],
@@ -178,20 +258,55 @@ class _PrivateBadge extends StatelessWidget {
     children: [
       Icon(Icons.lock_outline, size: 14, color: dashboardGreen),
       SizedBox(width: 4),
-      Text('Private', style: TextStyle(color: dashboardGreen, fontSize: 11, fontWeight: FontWeight.w700)),
+      Text(
+        'Private',
+        style: TextStyle(
+          color: dashboardGreen,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     ],
   );
 }
 
-String _date(DateTime? value) => value == null ? 'Date not available' : '${value.day} ${_months[value.month - 1]} ${value.year}';
+String _date(DateTime? value) => value == null
+    ? 'Date not available'
+    : '${value.day} ${_months[value.month - 1]} ${value.year}';
 String _timeRange(AppointmentModel? appointment) {
   if (appointment == null) return 'Not available';
   final start = appointment.startAt;
   final end = appointment.endAt;
   if (start == null) return 'Time not available';
-  String format(DateTime value) => '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
+  String format(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   return end == null ? format(start) : '${format(start)} - ${format(end)}';
 }
-String _sessionType(String? value) => switch (value) { 'video' => 'Video', 'audio' => 'Audio', 'in_person' => 'In-person', 'chat' => 'Chat', _ => 'Counseling session' };
+
+String _sessionType(String? value) => switch (value) {
+  'video' => 'Video',
+  'audio' => 'Audio',
+  'in_person' => 'In-person',
+  'chat' => 'Chat',
+  _ => 'Counseling session',
+};
 String _preview(String text) => text.replaceAll(RegExp(r'\s+'), ' ').trim();
-const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+String _sessionTitle(SessionNoteEntry entry) {
+  final reason = entry.appointment?.reason?.trim();
+  return reason == null || reason.isEmpty ? 'Counseling session' : reason;
+}
+
+const _months = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];

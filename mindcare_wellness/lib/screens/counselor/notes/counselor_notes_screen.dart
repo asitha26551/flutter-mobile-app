@@ -41,7 +41,8 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
         entry.appointment?.reason ?? '',
         entry.appointment?.sessionType ?? '',
       ].join(' ').toLowerCase();
-      final matchesFilter = _filter == 'All' ||
+      final matchesFilter =
+          _filter == 'All' ||
           (_filter == 'Recent' && recent) ||
           (_filter == 'Previous Sessions' && !recent);
       return matchesFilter && (query.isEmpty || searchable.contains(query));
@@ -63,7 +64,9 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
       stream: _noteService.forCounselor(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: dashboardGreen));
+          return const Center(
+            child: CircularProgressIndicator(color: dashboardGreen),
+          );
         }
         if (snapshot.hasError) {
           return _NotesError(onRetry: () => setState(() {}));
@@ -73,7 +76,9 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
           future: _loadEntries(notes),
           builder: (context, entrySnapshot) {
             if (entrySnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: dashboardGreen));
+              return const Center(
+                child: CircularProgressIndicator(color: dashboardGreen),
+              );
             }
             if (entrySnapshot.hasError) {
               return _NotesError(onRetry: () => setState(() {}));
@@ -110,8 +115,7 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
                 const SizedBox(height: 16),
                 if (notes.isEmpty)
                   const EmptyState(
-                    message:
-                        'No session notes yet\nCompleted counseling session notes will appear here.',
+                    message: 'No session notes yet\nCompleted counseling session notes will appear here.',
                   )
                 else if (entries.isEmpty)
                   const EmptyState(message: 'No notes match your search.')
@@ -119,20 +123,25 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
                   ...entries.map(
                     (entry) => _NoteRow(
                       entry: entry,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => SessionNoteDetailsScreen(
-                            entry: entry,
-                            previousEntries: notes
-                                .where((note) =>
-                                    note.studentId == entry.note.studentId &&
-                                    note.id != entry.note.id)
-                                .map((note) => SessionNoteEntry(note: note))
-                                .toList(),
+                      onView: () {
+                        final previousEntries = entrySnapshot.data!
+                            .where(
+                              (candidate) =>
+                                  candidate.note.studentId ==
+                                      entry.note.studentId &&
+                                  candidate.note.id != entry.note.id,
+                            )
+                            .toList();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SessionNoteDetailsScreen(
+                              entry: entry,
+                              previousEntries: previousEntries,
+                            ),
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
               ],
@@ -153,13 +162,15 @@ class _NotesHeader extends StatelessWidget {
     children: [
       Row(
         children: [
-          const Icon(Icons.sticky_note_2_outlined, color: dashboardGreen, size: 28),
+          const Icon(
+            Icons.sticky_note_2_outlined,
+            color: dashboardGreen,
+            size: 28,
+          ),
           const SizedBox(width: 10),
           Text(
             'Notes',
-            style: Theme.of(context)
-                .textTheme
-                .headlineSmall
+            style: Theme.of(context).textTheme.headlineSmall
                 ?.copyWith(color: dashboardInk, fontWeight: FontWeight.w800),
           ),
         ],
@@ -220,10 +231,10 @@ class _FilterBar extends StatelessWidget {
 }
 
 class _NoteRow extends StatelessWidget {
-  const _NoteRow({required this.entry, required this.onTap});
+  const _NoteRow({required this.entry, required this.onView});
 
   final SessionNoteEntry entry;
-  final VoidCallback onTap;
+  final VoidCallback onView;
 
   @override
   Widget build(BuildContext context) {
@@ -232,82 +243,79 @@ class _NoteRow extends StatelessWidget {
     final preview = entry.note.note.replaceAll(RegExp(r'\s+'), ' ').trim();
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(15, 14, 12, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      entry.studentLabel,
-                      style: const TextStyle(
-                        color: dashboardInk,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    _formatDate(date),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(15, 14, 12, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    entry.studentLabel,
                     style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Text(
-                    _sessionType(appointment?.sessionType),
-                    style: const TextStyle(
-                      color: dashboardGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const Text('  •  ', style: TextStyle(color: Colors.black38)),
-                  const Text(
-                    'Completed',
-                    style: TextStyle(
-                      color: dashboardGreen,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 11),
-              Text(
-                preview.isEmpty ? 'No note preview available.' : preview,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: dashboardInk, height: 1.35),
-              ),
-              const SizedBox(height: 11),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    'View Session Note',
-                    style: TextStyle(
-                      color: dashboardGreen,
+                      color: dashboardInk,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  SizedBox(width: 4),
-                  Icon(Icons.chevron_right, color: dashboardGreen),
-                ],
+                ),
+                Text(
+                  _formatDate(date),
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text(
+                  _sessionType(appointment?.sessionType),
+                  style: const TextStyle(
+                    color: dashboardGreen,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const Text('  •  ', style: TextStyle(color: Colors.black38)),
+                const Text(
+                  'Completed',
+                  style: TextStyle(
+                    color: dashboardGreen,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 11),
+            Text(
+              preview.isEmpty ? 'No note preview available.' : preview,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: dashboardInk, height: 1.35),
+            ),
+            const SizedBox(height: 11),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: onView,
+                icon: const Icon(Icons.arrow_forward, size: 16),
+                label: const Text('View'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, 34),
+                  padding: const EdgeInsets.symmetric(horizontal: 13),
+                  backgroundColor: dashboardGreen,
+                  foregroundColor: Colors.white,
+                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
