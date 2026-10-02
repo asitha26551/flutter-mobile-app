@@ -18,36 +18,8 @@ class CounselorNotesScreen extends StatefulWidget {
 
 class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   final _noteService = SessionNoteService();
-  final _searchController = TextEditingController();
   Future<List<SessionNoteEntry>>? _entriesFuture;
   String _entryKey = '';
-  String _filter = 'All';
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  List<SessionNoteEntry> _filterEntries(List<SessionNoteEntry> entries) {
-    final query = _searchController.text.trim().toLowerCase();
-    final now = DateTime.now();
-    return entries.where((entry) {
-      final created = entry.note.createdAt;
-      final recent = created != null && now.difference(created).inDays <= 30;
-      final searchable = [
-        entry.studentLabel,
-        entry.note.note,
-        entry.appointment?.reason ?? '',
-        entry.appointment?.sessionType ?? '',
-      ].join(' ').toLowerCase();
-      final matchesFilter =
-          _filter == 'All' ||
-          (_filter == 'Recent' && recent) ||
-          (_filter == 'Previous Sessions' && !recent);
-      return matchesFilter && (query.isEmpty || searchable.contains(query));
-    }).toList();
-  }
 
   Future<List<SessionNoteEntry>> _loadEntries(List<SessionNoteModel> notes) {
     final key = notes.map((note) => note.id).join('|');
@@ -83,71 +55,66 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
             if (entrySnapshot.hasError) {
               return _NotesError(onRetry: () => setState(() {}));
             }
-            final entries = _filterEntries(entrySnapshot.data ?? const []);
+            final allEntries = entrySnapshot.data ?? const [];
+
+            // Group by student — one card per student, latest note first
             final groupedEntries = <String, List<SessionNoteEntry>>{};
-            for (final entry in entries) {
+            for (final entry in allEntries) {
               final key = entry.note.studentId.isNotEmpty
                   ? entry.note.studentId
                   : entry.studentLabel;
               groupedEntries.putIfAbsent(key, () => []).add(entry);
             }
+
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
               children: [
                 const _NotesHeader(),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _searchController,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'Search notes or students',
-                    prefixIcon: const Icon(Icons.search, color: dashboardGreen),
-                    suffixIcon: _searchController.text.isEmpty
-                        ? null
-                        : IconButton(
-                            tooltip: 'Clear search',
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {});
-                            },
-                            icon: const Icon(Icons.close),
-                          ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _FilterBar(
-                  selected: _filter,
-                  onSelected: (value) => setState(() => _filter = value),
-                ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 if (notes.isEmpty)
                   const EmptyState(
-                    message: 'No session notes yet\nCompleted counseling session notes will appear here.',
+                    message:
+                        'No session notes yet\nCompleted counseling session notes will appear here.',
                   )
-                else if (entries.isEmpty)
-                  const EmptyState(message: 'No notes match your search.')
+                else if (groupedEntries.isEmpty)
+                  const EmptyState(message: 'No notes found.')
                 else
                   ...groupedEntries.values.map(
-                    (studentEntries) => _StudentNoteCard(
-                      entries: studentEntries,
-                      onView: () {
-                        final entry = studentEntries.first;
-                        final previousEntries = (entrySnapshot.data ?? [])
-                            .where((candidate) =>
-                                candidate.note.studentId == entry.note.studentId &&
-                                candidate.note.id != entry.note.id)
-                            .toList();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => SessionNoteDetailsScreen(
-                              entry: entry,
-                              previousEntries: previousEntries,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                    (studentEntries) {
+                      // Sort so latest session is first
+                      final sorted = [...studentEntries]
+                        ..sort((a, b) {
+                          final dateA =
+                              a.note.createdAt ?? a.appointment?.startAt;
+                          final dateB =
+                              b.note.createdAt ?? b.appointment?.startAt;
+                          if (dateA == null && dateB == null) return 0;
+                          if (dateA == null) return 1;
+                          if (dateB == null) return -1;
+                          return dateB.compareTo(dateA);
+                        });
+                      final latest = sorted.first;
+                      final previous = sorted.skip(1).toList();
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _StudentNoteCard(
+                          latestEntry: latest,
+                          previousEntries: previous,
+                          totalCount: sorted.length,
+                          onView: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SessionNoteDetailsScreen(
+                                  entry: latest,
+                                  previousEntries: previous,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
               ],
             );
@@ -158,186 +125,324 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   );
 }
 
+// ──────────────────────────────────────────
+// Header (matches image top-bar style)
+// ──────────────────────────────────────────
 class _NotesHeader extends StatelessWidget {
   const _NotesHeader();
 
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) => Row(
     children: [
-      Row(
-        children: [
-          const Icon(
-            Icons.sticky_note_2_outlined,
-            color: dashboardGreen,
-            size: 28,
-          ),
-          const SizedBox(width: 10),
-          Text(
-            'Notes',
-            style: Theme.of(context).textTheme.headlineSmall
-                ?.copyWith(color: dashboardInk, fontWeight: FontWeight.w800),
-          ),
-        ],
-      ),
-      const SizedBox(height: 5),
-      const Text(
-        'Review your previous counseling sessions and session notes.',
-        style: TextStyle(color: Colors.black54),
-      ),
-      const SizedBox(height: 9),
-      const Row(
-        children: [
-          Icon(Icons.lock_outline, color: dashboardGreen, size: 15),
-          SizedBox(width: 5),
-          Text(
-            'Private counselor notes',
-            style: TextStyle(
-              color: dashboardGreen,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+      Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: const Icon(Icons.shield_outlined, color: dashboardGreen, size: 22),
+      ),
+      const SizedBox(width: 12),
+      const Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'COUNSELOR PORTAL',
+              style: TextStyle(
+                color: dashboardGreen,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+                letterSpacing: .7,
+              ),
+            ),
+            Text(
+              'Notes',
+              style: TextStyle(
+                color: dashboardInk,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+      Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFD0EDD8), width: 1.5),
+        ),
+        child: const Icon(Icons.person, color: dashboardGreen, size: 22),
       ),
     ],
   );
 }
 
-class _FilterBar extends StatelessWidget {
-  const _FilterBar({required this.selected, required this.onSelected});
-
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) => SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: ['All', 'Recent', 'Previous Sessions']
-          .map(
-            (filter) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(filter),
-                selected: selected == filter,
-                onSelected: (_) => onSelected(filter),
-                selectedColor: dashboardGreen,
-                labelStyle: TextStyle(
-                  color: selected == filter ? Colors.white : dashboardInk,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          )
-          .toList(),
-    ),
-  );
-}
-
+// ──────────────────────────────────────────
+// Student Note Card — one per student
+// ──────────────────────────────────────────
 class _StudentNoteCard extends StatelessWidget {
-  const _StudentNoteCard({required this.entries, required this.onView});
+  const _StudentNoteCard({
+    required this.latestEntry,
+    required this.previousEntries,
+    required this.totalCount,
+    required this.onView,
+  });
 
-  final List<SessionNoteEntry> entries;
+  final SessionNoteEntry latestEntry;
+  final List<SessionNoteEntry> previousEntries;
+  final int totalCount;
   final VoidCallback onView;
 
   @override
   Widget build(BuildContext context) {
-    final entry = entries.first;
-    final appointment = entry.appointment;
-    final date = entry.note.createdAt ?? appointment?.startAt;
-    final preview = entry.note.note.replaceAll(RegExp(r'\s+'), ' ').trim();
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 13),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final appointment = latestEntry.appointment;
+    final date = latestEntry.note.createdAt ?? appointment?.startAt;
+    final noteText = latestEntry.note.note.trim();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Student identity row ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+            child: Row(
               children: [
-                Expanded(
-                  child: Text(
-                    entry.studentLabel,
-                    style: const TextStyle(
-                      color: dashboardInk,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                    ),
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDDF8E6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.person_outline,
+                    color: dashboardGreen,
+                    size: 20,
                   ),
                 ),
-                Text(
-                  '${entries.length} ${entries.length == 1 ? 'session' : 'sessions'}',
-                  style: const TextStyle(
-                    color: dashboardGreen,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        latestEntry.studentLabel,
+                        style: const TextStyle(
+                          color: dashboardInk,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      Text(
+                        '$totalCount ${totalCount == 1 ? 'session' : 'sessions'} logged',
+                        style: const TextStyle(
+                          color: dashboardGreen,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Latest clinical session',
-              style: TextStyle(
-                color: dashboardGreen,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-              ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── "LATEST CLINICAL SESSION" label ──
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFD5F4DC),
+              borderRadius: BorderRadius.circular(8),
             ),
-            const SizedBox(height: 4),
-            Row(
+            child: Row(
               children: [
-                Text(
-                  _sessionType(appointment?.sessionType),
-                  style: const TextStyle(
-                    color: dashboardGreen,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const Text('  •  ', style: TextStyle(color: Colors.black38)),
                 const Text(
-                  'Completed',
+                  'LATEST CLINICAL SESSION',
                   style: TextStyle(
                     color: dashboardGreen,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .5,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: dashboardGreen,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.circle,
+                        color: Color(0xFF55F44C),
+                        size: 7,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _sessionLabel(appointment?.sessionType),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 11),
-            Text(
-              preview.isEmpty ? 'No note preview available.' : preview,
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: dashboardInk, height: 1.35),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ── Session meta ──
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.calendar_today_outlined,
+                  color: dashboardGreen,
+                  size: 13,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  _formatDate(date),
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Icon(
+                  Icons.access_time_outlined,
+                  color: Colors.black38,
+                  size: 13,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  _sessionLabel(appointment?.sessionType),
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              _formatDate(date),
-              style: const TextStyle(color: Colors.black54, fontSize: 11),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ── Note preview ──
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 14),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FBF3),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: const Color(0xFFCCEDD4),
+                width: 1,
+              ),
             ),
-            const SizedBox(height: 11),
-            Align(
-              alignment: Alignment.centerRight,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.edit_note_outlined,
+                      color: dashboardGreen,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 5),
+                    const Text(
+                      'SESSION NOTES',
+                      style: TextStyle(
+                        color: dashboardGreen,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                Text(
+                  noteText.isEmpty ? 'No note content.' : noteText,
+                  maxLines: 5,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: dashboardInk,
+                    fontSize: 12,
+                    height: 1.45,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // ── View button ──
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: SizedBox(
+              width: double.infinity,
               child: FilledButton.icon(
                 onPressed: onView,
-                icon: const Icon(Icons.arrow_forward, size: 16),
-                label: const Text('View'),
+                icon: const Icon(Icons.open_in_new, size: 15),
+                label: const Text('View Full Clinical Record'),
                 style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, 34),
-                  padding: const EdgeInsets.symmetric(horizontal: 13),
                   backgroundColor: dashboardGreen,
                   foregroundColor: Colors.white,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w800),
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  textStyle: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -382,12 +487,12 @@ String _formatDate(DateTime? value) => value == null
     ? 'Date pending'
     : '${value.day} ${_months[value.month - 1]} ${value.year}';
 
-String _sessionType(String? value) => switch (value) {
-  'video' => 'Video',
-  'audio' => 'Audio',
-  'in_person' => 'In-person',
-  'chat' => 'Chat',
-  _ => 'Session',
+String _sessionLabel(String? value) => switch (value) {
+  'video' => 'Video consultation',
+  'audio' => 'Audio session',
+  'in_person' => 'In-person Review',
+  'chat' => 'Chat session',
+  _ => 'Counseling session',
 };
 
 const _months = [

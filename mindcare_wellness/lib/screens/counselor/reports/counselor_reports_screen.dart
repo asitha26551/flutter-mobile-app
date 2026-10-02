@@ -104,43 +104,40 @@ class ReportsHeader extends StatelessWidget {
   Widget build(BuildContext context) => Row(
     children: [
       Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(color: const Color(0xFFD5F8DF), borderRadius: BorderRadius.circular(9)),
-        child: const Icon(Icons.bar_chart_outlined, color: dashboardGreen, size: 20),
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(Icons.shield_outlined, color: dashboardGreen, size: 22),
       ),
-      const SizedBox(width: 10),
+      const SizedBox(width: 12),
       const Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('COUNSELOR PORTAL', style: TextStyle(color: dashboardGreen, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .6)),
-            Text('Reports', style: TextStyle(color: dashboardInk, fontSize: 20, fontWeight: FontWeight.w800)),
+            Text('COUNSELOR PORTAL', style: TextStyle(color: dashboardGreen, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7)),
+            Text('Reports', style: TextStyle(color: dashboardInk, fontSize: 22, fontWeight: FontWeight.w800)),
           ],
         ),
       ),
-      const _LiveBadge(),
+      const CircleAvatar(
+        radius: 20,
+        backgroundColor: Color(0xFFDDF8E6),
+        child: Icon(Icons.person, color: dashboardGreen, size: 22),
+      ),
     ],
   );
 }
 
-class _LiveBadge extends StatelessWidget {
-  const _LiveBadge();
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-    decoration: BoxDecoration(color: const Color(0xFFD8F8E0), borderRadius: BorderRadius.circular(13)),
-    child: const Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.circle, color: dashboardBright, size: 8),
-        SizedBox(width: 5),
-        Text('Live sync', style: TextStyle(color: dashboardGreen, fontSize: 9, fontWeight: FontWeight.w800)),
-      ],
-    ),
-  );
-}
 
 class _RangeSelector extends StatelessWidget {
   const _RangeSelector({required this.range, required this.customRange, required this.onChanged});

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../models/counselor_models.dart';
 import '../../../services/counselor_service.dart';
-import '../../../widgets/auth_widgets.dart';
 import '../counselor_helpers.dart';
 import '../counselor_theme.dart';
 
@@ -13,23 +12,30 @@ class PortalHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     color: dashboardMint,
-    padding: const EdgeInsets.fromLTRB(21, 13, 17, 12),
+    padding: const EdgeInsets.fromLTRB(16, 13, 16, 12),
     child: Row(
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: const Icon(
             Icons.shield_outlined,
             color: dashboardGreen,
-            size: 19,
+            size: 22,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 12),
         const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,46 +46,29 @@ class PortalHeader extends StatelessWidget {
                   color: dashboardGreen,
                   fontSize: 9,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: .6,
+                  letterSpacing: .7,
                 ),
               ),
               Text(
                 'Home',
                 style: TextStyle(
                   color: dashboardInk,
-                  fontSize: 17,
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ],
           ),
         ),
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: mintGreen,
-              backgroundImage: profile.imageUrl == null
-                  ? null
-                  : NetworkImage(profile.imageUrl!),
-              child: profile.imageUrl == null
-                  ? const Icon(Icons.person, color: dashboardGreen)
-                  : null,
-            ),
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: dashboardBright,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: dashboardMint, width: 2),
-                ),
-              ),
-            ),
-          ],
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: const Color(0xFFDDF8E6),
+          backgroundImage: profile.imageUrl == null
+              ? null
+              : NetworkImage(profile.imageUrl!),
+          child: profile.imageUrl == null
+              ? const Icon(Icons.person, color: dashboardGreen, size: 22)
+              : null,
         ),
       ],
     ),

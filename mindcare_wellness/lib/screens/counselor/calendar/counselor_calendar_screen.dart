@@ -348,12 +348,27 @@ class _CalendarHeading extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     children: [
-      const Icon(
-        Icons.calendar_month_outlined,
-        color: dashboardGreen,
-        size: 28,
+      Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Icon(
+          Icons.shield_outlined,
+          color: dashboardGreen,
+          size: 22,
+        ),
       ),
-      const SizedBox(width: 10),
+      const SizedBox(width: 12),
       const Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,13 +377,13 @@ class _CalendarHeading extends StatelessWidget {
               'COUNSELOR PORTAL',
               style: TextStyle(
                 color: dashboardGreen,
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: FontWeight.w800,
-                letterSpacing: .6,
+                letterSpacing: .7,
               ),
             ),
             Text(
-              'Calendar',
+              'Calender',
               style: TextStyle(
                 color: dashboardInk,
                 fontSize: 22,
@@ -379,19 +394,32 @@ class _CalendarHeading extends StatelessWidget {
         ),
       ),
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
         decoration: BoxDecoration(
           color: const Color(0xFFD8F8E0),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text(
-          'Live sync',
-          style: TextStyle(
-            color: dashboardGreen,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-          ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.circle, color: dashboardGreen, size: 7),
+            SizedBox(width: 5),
+            Text(
+              'Synced just now',
+              style: TextStyle(
+                color: dashboardGreen,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
         ),
+      ),
+      const SizedBox(width: 10),
+      const CircleAvatar(
+        radius: 20,
+        backgroundColor: Color(0xFFDDF8E6),
+        child: Icon(Icons.person, color: dashboardGreen, size: 22),
       ),
     ],
   );
