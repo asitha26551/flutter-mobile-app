@@ -21,8 +21,15 @@ class SessionNoteDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appointment = appointmentOverride ?? entry.appointment;
     return Scaffold(
+      backgroundColor: dashboardMint,
       appBar: AppBar(
-        title: const Text('Session Note'),
+        backgroundColor: dashboardMint,
+        foregroundColor: dashboardInk,
+        elevation: 0,
+        title: const Text(
+          'Student Clinical Details',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+        ),
         actions: [
           IconButton(
             tooltip: 'Edit note',
@@ -42,111 +49,132 @@ class SessionNoteDetailsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
         children: [
-          _Section(
-            title: 'Student information',
-            child: _InfoLine(label: 'Student', value: entry.studentLabel),
+          const _EncryptedFileBanner(),
+          const SizedBox(height: 12),
+          _StudentSummaryCard(
+            studentLabel: entry.studentLabel,
+            appointment: appointment,
+            sessionCount: previousEntries.length + 1,
           ),
           const SizedBox(height: 14),
-          _Section(
-            title: 'Session information',
-            child: Column(
-              children: [
-                _InfoLine(
-                  label: 'Date',
-                  value: _date(appointment?.startAt ?? entry.note.createdAt),
+          const Text(
+            'Latest clinical session',
+            style: TextStyle(color: dashboardInk, fontSize: 17, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          _ClinicalSessionCard(entry: entry),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Consultation history',
+                  style: TextStyle(color: dashboardInk, fontSize: 17, fontWeight: FontWeight.w800),
                 ),
-                _InfoLine(label: 'Time', value: _timeRange(appointment)),
-                _InfoLine(
-                  label: 'Session type',
-                  value: _sessionType(appointment?.sessionType),
-                ),
-                const _InfoLine(
-                  label: 'Appointment status',
-                  value: 'Completed',
-                ),
-              ],
+              ),
+              Text('${previousEntries.length + 1} Records', style: const TextStyle(color: Colors.black54, fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _ClinicalSessionCard(entry: entry),
+          ...previousEntries.map(
+            (previous) => Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: _ClinicalSessionCard(entry: previous),
             ),
           ),
-          if (appointment?.reason?.isNotEmpty == true ||
-              appointment?.studentNotes?.isNotEmpty == true) ...[
-            const SizedBox(height: 14),
-            _Section(
-              title: 'Student-provided information',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (appointment?.reason?.isNotEmpty == true)
-                    _LabeledText(
-                      label: 'Reason for appointment',
-                      text: appointment!.reason!,
-                    ),
-                  if (appointment?.studentNotes?.isNotEmpty == true)
-                    _LabeledText(
-                      label: 'Student notes',
-                      text: appointment!.studentNotes!,
-                    ),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          _Section(
-            title: 'Counselor session note',
-            trailing: const _PrivateBadge(),
-            child: Text(
-              entry.note.note.isEmpty ? 'No note content.' : entry.note.note,
-              style: const TextStyle(
-                color: dashboardInk,
-                height: 1.5,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          if (previousEntries.isNotEmpty) ...[
-            const SizedBox(height: 22),
-            const Text(
-              'Previous sessions',
-              style: TextStyle(
-                color: dashboardInk,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...previousEntries.map(
-              (previous) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const CircleAvatar(
-                  radius: 18,
-                  backgroundColor: dashboardMint,
-                  child: Icon(Icons.history, color: dashboardGreen, size: 18),
-                ),
-                title: Text(
-                  _sessionTitle(previous),
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                subtitle: Text(
-                  '${_date(previous.appointment?.startAt ?? previous.note.createdAt)}  •  ${_sessionType(previous.appointment?.sessionType)}\n${_preview(previous.note.note)}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => SessionNoteDetailsScreen(
-                      entry: previous,
-                      previousEntries: previousEntries
-                          .where((item) => item.note.id != previous.note.id)
-                          .toList(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
         ],
       ),
+    );
+  }
+}
+
+class _EncryptedFileBanner extends StatelessWidget {
+  const _EncryptedFileBanner();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(color: const Color(0xFFD5F4DC), borderRadius: BorderRadius.circular(12)),
+    child: const Row(
+      children: [
+        Icon(Icons.lock, color: dashboardGreen, size: 18),
+        SizedBox(width: 8),
+        Expanded(child: Text('ENCRYPTED\nFILE', style: TextStyle(color: dashboardInk, fontSize: 10, fontWeight: FontWeight.w800, height: 1.1))),
+        Text('Dr. Perera\nAccess', textAlign: TextAlign.center, style: TextStyle(color: dashboardInk, fontSize: 9, height: 1.1)),
+      ],
+    ),
+  );
+}
+
+class _StudentSummaryCard extends StatelessWidget {
+  const _StudentSummaryCard({required this.studentLabel, required this.appointment, required this.sessionCount});
+  final String studentLabel;
+  final AppointmentModel? appointment;
+  final int sessionCount;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(13),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 38, height: 38, decoration: BoxDecoration(color: const Color(0xFFDDF8E6), borderRadius: BorderRadius.circular(12)), child: const Icon(Icons.person_outline, color: dashboardGreen)),
+          const SizedBox(width: 10),
+          Expanded(child: Text(studentLabel, style: const TextStyle(color: dashboardInk, fontSize: 16, fontWeight: FontWeight.w800))),
+          const Text('Alias Mode', style: TextStyle(color: Colors.black54, fontSize: 10)),
+        ]),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _SummaryMetric(value: '$sessionCount', label: 'Total Sessions')),
+          const SizedBox(width: 8),
+          Expanded(child: _SummaryMetric(value: _date(appointment?.startAt), label: 'Last Visit')),
+          const SizedBox(width: 8),
+          const Expanded(child: _SummaryMetric(value: 'Academic', label: 'Stress Concern')),
+        ]),
+      ]),
+    ),
+  );
+}
+
+class _SummaryMetric extends StatelessWidget {
+  const _SummaryMetric({required this.value, required this.label});
+  final String value;
+  final String label;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+    decoration: BoxDecoration(color: const Color(0xFFF0FBF3), borderRadius: BorderRadius.circular(10)),
+    child: Column(children: [Text(value, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: dashboardGreen, fontWeight: FontWeight.w800, fontSize: 12)), const SizedBox(height: 3), Text(label, textAlign: TextAlign.center, style: const TextStyle(color: Colors.black54, fontSize: 8))]),
+  );
+}
+
+class _ClinicalSessionCard extends StatelessWidget {
+  const _ClinicalSessionCard({required this.entry});
+  final SessionNoteEntry entry;
+  @override
+  Widget build(BuildContext context) {
+    final appointment = entry.appointment;
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.description_outlined, color: dashboardGreen, size: 18),
+          const SizedBox(width: 7),
+          Expanded(child: Text(_sessionTitle(entry), style: const TextStyle(color: dashboardInk, fontWeight: FontWeight.w800))),
+          Text(_date(appointment?.startAt ?? entry.note.createdAt), style: const TextStyle(color: Colors.black54, fontSize: 10)),
+        ]),
+        const SizedBox(height: 6),
+        Text('${_sessionType(appointment?.sessionType)}  •  ${_timeRange(appointment)}', style: const TextStyle(color: Colors.black54, fontSize: 10)),
+        const SizedBox(height: 9),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: const Color(0xFFF0FBF3), borderRadius: BorderRadius.circular(10)),
+          child: Text(entry.note.note.isEmpty ? 'No note content.' : entry.note.note, style: const TextStyle(color: dashboardInk, fontSize: 11, height: 1.4)),
+        ),
+      ]),
     );
   }
 }

@@ -84,6 +84,13 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
               return _NotesError(onRetry: () => setState(() {}));
             }
             final entries = _filterEntries(entrySnapshot.data ?? const []);
+            final groupedEntries = <String, List<SessionNoteEntry>>{};
+            for (final entry in entries) {
+              final key = entry.note.studentId.isNotEmpty
+                  ? entry.note.studentId
+                  : entry.studentLabel;
+              groupedEntries.putIfAbsent(key, () => []).add(entry);
+            }
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
               children: [
@@ -120,17 +127,15 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
                 else if (entries.isEmpty)
                   const EmptyState(message: 'No notes match your search.')
                 else
-                  ...entries.map(
-                    (entry) => _NoteRow(
-                      entry: entry,
+                  ...groupedEntries.values.map(
+                    (studentEntries) => _StudentNoteCard(
+                      entries: studentEntries,
                       onView: () {
-                        final previousEntries = entrySnapshot.data!
-                            .where(
-                              (candidate) =>
-                                  candidate.note.studentId ==
-                                      entry.note.studentId &&
-                                  candidate.note.id != entry.note.id,
-                            )
+                        final entry = studentEntries.first;
+                        final previousEntries = (entrySnapshot.data ?? [])
+                            .where((candidate) =>
+                                candidate.note.studentId == entry.note.studentId &&
+                                candidate.note.id != entry.note.id)
                             .toList();
                         Navigator.push(
                           context,
@@ -230,21 +235,23 @@ class _FilterBar extends StatelessWidget {
   );
 }
 
-class _NoteRow extends StatelessWidget {
-  const _NoteRow({required this.entry, required this.onView});
+class _StudentNoteCard extends StatelessWidget {
+  const _StudentNoteCard({required this.entries, required this.onView});
 
-  final SessionNoteEntry entry;
+  final List<SessionNoteEntry> entries;
   final VoidCallback onView;
 
   @override
   Widget build(BuildContext context) {
+    final entry = entries.first;
     final appointment = entry.appointment;
     final date = entry.note.createdAt ?? appointment?.startAt;
     final preview = entry.note.note.replaceAll(RegExp(r'\s+'), ' ').trim();
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(15, 14, 12, 12),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 13),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -261,9 +268,9 @@ class _NoteRow extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  _formatDate(date),
+                  '${entries.length} ${entries.length == 1 ? 'session' : 'sessions'}',
                   style: const TextStyle(
-                    color: Colors.black54,
+                    color: dashboardGreen,
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -271,6 +278,15 @@ class _NoteRow extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 6),
+            Text(
+              'Latest clinical session',
+              style: TextStyle(
+                color: dashboardGreen,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
             Row(
               children: [
                 Text(
@@ -295,9 +311,14 @@ class _NoteRow extends StatelessWidget {
             const SizedBox(height: 11),
             Text(
               preview.isEmpty ? 'No note preview available.' : preview,
-              maxLines: 3,
+              maxLines: 4,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(color: dashboardInk, height: 1.35),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              _formatDate(date),
+              style: const TextStyle(color: Colors.black54, fontSize: 11),
             ),
             const SizedBox(height: 11),
             Align(

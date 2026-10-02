@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../models/counselor_models.dart';
 import '../../../services/counselor_service.dart';
-import '../../../services/notification_service.dart';
 import '../../../widgets/common/empty_state.dart';
 import '../../../widgets/common/error_message.dart';
 import '../../../widgets/common/loading.dart';
@@ -10,8 +9,8 @@ import '../counselor_helpers.dart';
 import '../counselor_theme.dart';
 import '../appointment_details_screen.dart';
 import '../calendar/counselor_calendar_screen.dart';
-import '../notifications/counselor_notifications_screen.dart';
 import '../notes/counselor_notes_screen.dart';
+import 'home_widgets.dart';
 
 class CounselorHomeScreen extends StatelessWidget {
   const CounselorHomeScreen({required this.service, super.key});
@@ -62,7 +61,7 @@ class CounselorHomeScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(17, 10, 17, 28),
                 children: [
-                  _DashboardHeader(profile: profileSnapshot.data!),
+                  PortalHeader(profile: profileSnapshot.data!),
                   const SizedBox(height: 6),
                   _DateLine(date: DateTime.now()),
                   const SizedBox(height: 5),
@@ -263,77 +262,6 @@ class _SummaryBox extends StatelessWidget {
         ),
       ],
     ),
-  );
-}
-
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.profile});
-  final CounselorProfile profile;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      CircleAvatar(
-        radius: 23,
-        backgroundColor: dashboardMint,
-        backgroundImage: profile.imageUrl == null
-            ? null
-            : NetworkImage(profile.imageUrl!),
-        child: profile.imageUrl == null
-            ? const Icon(Icons.person, color: dashboardGreen)
-            : null,
-      ),
-      const SizedBox(width: 10),
-      const Expanded(
-        child: Text(
-          'COUNSELOR PORTAL',
-          style: TextStyle(
-            color: dashboardGreen,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: .6,
-          ),
-        ),
-      ),
-      StreamBuilder(
-        stream: NotificationService().mine(),
-        builder: (context, snapshot) {
-          final unread = (snapshot.data ?? [])
-              .where((item) => !item.isRead)
-              .length;
-          return Stack(
-            children: [
-              IconButton(
-                tooltip: 'Notifications',
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const CounselorNotificationsScreen(),
-                  ),
-                ),
-                icon: const Icon(
-                  Icons.notifications_none_rounded,
-                  color: dashboardInk,
-                ),
-              ),
-              if (unread > 0)
-                Positioned(
-                  right: 7,
-                  top: 6,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: const BoxDecoration(
-                      color: Colors.redAccent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    ],
   );
 }
 
