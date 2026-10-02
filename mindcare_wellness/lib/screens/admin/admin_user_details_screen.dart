@@ -51,10 +51,11 @@ class _AdminUserDetailsScreenState extends State<AdminUserDetailsScreen> {
       }
       if (mounted) Navigator.pop(context);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Could not update account: $error')),
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

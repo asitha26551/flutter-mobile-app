@@ -111,18 +111,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _phoneValidator(String? value, {bool required = true}) {
     if (!required && (value == null || value.trim().isEmpty)) return null;
-    if (value == null || value.trim().isEmpty)
+    if (value == null || value.trim().isEmpty) {
       return 'Phone number is required';
-    if (!RegExp(r'^\+?[0-9 ()-]{7,20}$').hasMatch(value.trim()))
+    }
+    if (!RegExp(r'^\+?[0-9 ()-]{7,20}$').hasMatch(value.trim())) {
       return 'Enter a valid phone number';
+    }
     return null;
   }
 
   String? _numberValidator(String? value) {
-    if (value == null || value.trim().isEmpty)
+    if (value == null || value.trim().isEmpty) {
       return 'Years of experience is required';
-    if (int.tryParse(value.trim()) == null)
+    }
+    if (int.tryParse(value.trim()) == null) {
       return 'Enter a valid number of years';
+    }
     return null;
   }
 
@@ -181,13 +185,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           },
         );
       }
-      if (mounted)
+      if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (_) => EmailVerificationScreen(authService: _authService),
           ),
           (route) => false,
         );
+      }
     } catch (error) {
       if (mounted) _showMessage(authErrorMessage(error), isError: true);
     } finally {

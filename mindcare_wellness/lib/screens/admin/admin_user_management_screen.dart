@@ -122,12 +122,14 @@ class _AdminUserManagementScreenState extends State<AdminUserManagementScreen> {
             child: FutureBuilder<List<AdminUserRecord>>(
               future: _users,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting)
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
                 if (snapshot.hasError) return _ErrorState(onRetry: _refresh);
                 final records = snapshot.data!.where(_matches).toList();
-                if (records.isEmpty)
+                if (records.isEmpty) {
                   return const Center(child: Text('No matching users found.'));
+                }
                 return RefreshIndicator(
                   onRefresh: () async => _refresh(),
                   child: ListView.builder(

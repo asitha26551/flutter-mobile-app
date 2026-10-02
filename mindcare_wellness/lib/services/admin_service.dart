@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../models/admin_action_model.dart';
+
 class AdminUserRecord {
   const AdminUserRecord({required this.data, this.roleData = const {}});
 
@@ -52,6 +54,14 @@ class AdminService {
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
+
+  Stream<List<AdminActionModel>> auditActions() => _firestore
+      .collection('admin_actions')
+      .orderBy('createdAt', descending: true)
+      .snapshots()
+      .map(
+        (snapshot) => snapshot.docs.map(AdminActionModel.fromFirestore).toList(),
+      );
 
   Future<List<AdminUserRecord>> getUsers({required String role}) async {
     await _ensureAdminClaim();
@@ -116,6 +126,9 @@ class AdminService {
     fields: {
       'approvedBy': _adminUid,
       'approvedAt': FieldValue.serverTimestamp(),
+      'rejectedBy': null,
+      'rejectedAt': null,
+      'rejectionReason': null,
     },
     action: 'approve_counselor',
   );
@@ -123,22 +136,28 @@ class AdminService {
   Future<void> rejectCounselor(String uid, String reason) => _updateCounselor(
     uid,
     status: 'rejected',
-    accountStatus: 'rejected',
+    accountStatus: 'pending',
     fields: {
       'rejectedBy': _adminUid,
       'rejectedAt': FieldValue.serverTimestamp(),
       'rejectionReason': reason.trim(),
+      'approvedBy': null,
+      'approvedAt': null,
     },
     action: 'reject_counselor',
   );
 
   Future<void> suspendUser(AdminUserRecord user) =>
-      _updateStatus(user, 'suspended', 'suspend_user');
+      _updateStatus(
+        user,
+        'suspended',
+        user.role == 'counselor' ? 'suspend_counselor' : 'suspend_student',
+      );
 
   Future<void> reactivateUser(AdminUserRecord user) => _updateStatus(
     user,
     user.role == 'counselor' ? 'active' : 'active',
-    'reactivate_user',
+    user.role == 'counselor' ? 'reactivate_counselor' : 'reactivate_student',
   );
 
   String get _adminUid => _auth.currentUser?.uid ?? '';
@@ -154,6 +173,9 @@ class AdminService {
     final batch = _firestore.batch();
     final userReference = _users.doc(uid);
     final counselorReference = _firestore.collection('counselors').doc(uid);
+    final publicCounselorReference = _firestore
+      .collection('counselor_public')
+      .doc(uid);
     final now = FieldValue.serverTimestamp();
     batch.update(userReference, {
       'verificationStatus': status,
@@ -167,7 +189,18 @@ class AdminService {
       'updatedAt': now,
       ...fields,
     });
-    _addAudit(batch, action, uid, 'counselor');
+    batch.update(publicCounselorReference, {
+      'verificationStatus': status,
+      'accountStatus': accountStatus,
+      'updatedAt': now,
+    });
+    _addAudit(
+      batch,
+      action,
+      uid,
+      'counselor',
+      reason: fields['rejectionReason'] as String?,
+    );
     await batch.commit();
   }
 
@@ -196,14 +229,16 @@ class AdminService {
     WriteBatch batch,
     String action,
     String targetUserId,
-    String targetRole,
-  ) {
-    batch.set(_firestore.collection('adminActions').doc(), {
+    String targetRole, {
+    String? reason,
+  }) {
+    batch.set(_firestore.collection('admin_actions').doc(), {
       'adminId': _adminUid,
       'action': action,
       'targetUserId': targetUserId,
       'targetRole': targetRole,
-      'timestamp': FieldValue.serverTimestamp(),
+      'reason': reason,
+      'createdAt': FieldValue.serverTimestamp(),
     });
   }
 

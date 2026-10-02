@@ -57,8 +57,22 @@ class AuthGate extends StatelessWidget {
               );
             }
             if (profile.role == 'counselor') {
-              if (profile.accountStatus == 'pending') {
+              if (profile.accountStatus == 'suspended') {
+                return AccountStatusScreen(
+                  status: 'suspended',
+                  authService: service,
+                );
+              }
+              if (profile.verificationStatus == 'pending' ||
+                  profile.accountStatus == 'pending') {
                 return PendingCounselorScreen(authService: service);
+              }
+              if (profile.verificationStatus == 'rejected') {
+                return AccountStatusScreen(
+                  status: 'rejected',
+                  rejectionReason: profile.rejectionReason,
+                  authService: service,
+                );
               }
               if (profile.verificationStatus == 'approved' &&
                   profile.accountStatus == 'active') {

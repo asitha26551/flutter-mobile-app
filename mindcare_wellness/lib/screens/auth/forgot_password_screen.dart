@@ -29,13 +29,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       await AuthService().resetPassword(_emailController.text);
       if (mounted) setState(() => _sent = true);
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(authErrorMessage(error)),
             backgroundColor: Colors.red.shade700,
           ),
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }

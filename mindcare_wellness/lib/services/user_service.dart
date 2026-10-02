@@ -77,6 +77,23 @@ class UserService {
       'createdAt': now,
       'updatedAt': now,
     });
+    batch.set(_firestore.collection('counselor_public').doc(uid), {
+      'uid': uid,
+      'fullName': fullName.trim(),
+      'profileImage': null,
+      'department': counselorData['department'],
+      'professionalRole': counselorData['professionalRole'],
+      'specializations': counselorData['specializations'] ?? const <String>[],
+      'yearsOfExperience': counselorData['yearsOfExperience'],
+      'professionalBio': counselorData['professionalBio'],
+      'languages': counselorData['languages'] ?? const <String>[],
+      'sessionTypes': counselorData['sessionTypes'] ?? const <String>[],
+      'officeLocation': counselorData['officeLocation'],
+      'verificationStatus': 'pending',
+      'accountStatus': 'pending',
+      'createdAt': now,
+      'updatedAt': now,
+    });
     await batch.commit();
   }
 
