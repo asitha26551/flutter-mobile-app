@@ -81,10 +81,15 @@ class AppointmentService {
     String id, {
     required DateTime startAt,
     required DateTime endAt,
-  }) => _firestore.collection('appointments').doc(id).update({
-    'status': 'rescheduled',
-    'startAt': Timestamp.fromDate(startAt),
-    'endAt': Timestamp.fromDate(endAt),
-    'updatedAt': FieldValue.serverTimestamp(),
-  });
+  }) {
+    if (!endAt.isAfter(startAt)) {
+      throw ArgumentError('The appointment end time must be after its start time.');
+    }
+    return _firestore.collection('appointments').doc(id).update({
+      'status': 'rescheduled',
+      'startAt': Timestamp.fromDate(startAt),
+      'endAt': Timestamp.fromDate(endAt),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

@@ -15,6 +15,7 @@ class CounselorAvailabilityScreen extends StatefulWidget {
 class _CounselorAvailabilityScreenState
     extends State<CounselorAvailabilityScreen> {
   final _service = AvailabilityService();
+  String selectedDay = 'Monday';
 
   @override
   Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
@@ -26,6 +27,9 @@ class _CounselorAvailabilityScreenState
         builder: (context, snapshot) {
           final items = [...snapshot.data ?? const <CounselorAvailabilityModel>[]]
             ..sort(_compareAvailability);
+          final selectedItems = items
+              .where((item) => item.dayOfWeek.toLowerCase() == selectedDay.toLowerCase())
+              .toList();
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
             children: [
@@ -48,6 +52,20 @@ class _CounselorAvailabilityScreenState
                 style: TextStyle(color: Colors.black54, fontSize: 13),
               ),
               const SizedBox(height: 16),
+              _DaySelector(
+                selectedDay: selectedDay,
+                onChanged: (day) => setState(() => selectedDay = day),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                selectedDay,
+                style: const TextStyle(
+                  color: dashboardInk,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 9),
               if (snapshot.connectionState == ConnectionState.waiting)
                 const Center(
                   child: Padding(
@@ -63,8 +81,12 @@ class _CounselorAvailabilityScreenState
                 const _AvailabilityEmpty(
                   message: 'No working hours configured yet.',
                 )
+              else if (selectedItems.isEmpty)
+                const _AvailabilityEmpty(
+                  message: 'No availability slots for this day.',
+                )
               else
-                ...items.map(
+                ...selectedItems.map(
                   (item) => _AvailabilityRow(
                     item: item,
                     onDelete: () => _service.delete(item.id),
@@ -83,6 +105,42 @@ class _CounselorAvailabilityScreenState
       builder: (_) => _AddAvailabilityDialog(service: _service),
     );
   }
+}
+
+class _DaySelector extends StatelessWidget {
+  const _DaySelector({required this.selectedDay, required this.onChanged});
+  final String selectedDay;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: _weekdayNames
+          .map(
+            (day) => Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(day.substring(0, 3)),
+                selected: day == selectedDay,
+                onSelected: (_) => onChanged(day),
+                selectedColor: dashboardGreen,
+                backgroundColor: Colors.white,
+                labelStyle: TextStyle(
+                  color: day == selectedDay ? Colors.white : dashboardInk,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+                side: const BorderSide(color: Color(0xFFD6EBDD)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(11),
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    ),
+  );
 }
 
 class _AvailabilityHeader extends StatelessWidget {

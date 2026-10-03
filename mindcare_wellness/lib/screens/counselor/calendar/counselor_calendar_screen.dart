@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/counselor_availability_model.dart';
 import '../../../models/counselor_models.dart';
 import '../../../services/availability_service.dart';
 import '../../../services/counselor_service.dart';
@@ -22,6 +23,8 @@ class CounselorCalendarScreen extends StatefulWidget {
 class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
   late DateTime month;
   late DateTime selectedDay;
+  final availabilityService = AvailabilityService();
+  String selectedStatus = 'confirmed';
 
   @override
   void initState() {
@@ -57,35 +60,19 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
                     b.startAt ?? DateTime(2100),
                   ),
                 );
-          final sections = [
-            _AppointmentSection(
-              label: 'Confirmed',
-              color: dashboardGreen,
-              items: selected
-                  .where(
-                    (item) =>
-                        item.status == 'confirmed' ||
-                        item.status == 'completed' ||
-                        item.status == 'no_show',
-                  )
-                  .toList(),
-            ),
-            _AppointmentSection(
-              label: 'Pending',
-              color: Colors.orange.shade700,
-              items: selected
-                  .where(
-                    (item) =>
-                        item.status == 'pending' || item.status == 'rescheduled',
-                  )
-                  .toList(),
-            ),
-            _AppointmentSection(
-              label: 'Rejected',
-              color: const Color(0xFFC62828),
-              items: selected.where((item) => item.status == 'rejected').toList(),
-            ),
-          ].where((section) => section.items.isNotEmpty).toList();
+          final visibleAppointments = selected.where((item) {
+            if (selectedStatus == 'confirmed') {
+              return item.status == 'confirmed' ||
+                  item.status == 'rescheduled' ||
+                  item.status == 'completed' ||
+                  item.status == 'no_show';
+            }
+            return item.status == selectedStatus;
+          }).toList();
+          return StreamBuilder<List<CounselorAvailabilityModel>>(
+            stream: availabilityService.forCounselor(availabilityService.uid),
+            builder: (context, availabilitySnapshot) {
+              final availability = availabilitySnapshot.data ?? const [];
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 13, 16, 28),
             children: [
@@ -105,6 +92,7 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
                 month: month,
                 selectedDay: selectedDay,
                 appointments: appointments,
+                availability: availability,
                 onPrevious: () => _changeMonth(-1),
                 onNext: () => _changeMonth(1),
                 onDaySelected: (day) => setState(() => selectedDay = day),
@@ -121,17 +109,22 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
                 ),
               ),
               const SizedBox(height: 9),
-              if (selected.isEmpty)
+              _AppointmentStatusTabs(
+                selectedStatus: selectedStatus,
+                appointments: selected,
+                onChanged: (status) => setState(() => selectedStatus = status),
+              ),
+              const SizedBox(height: 8),
+              if (visibleAppointments.isEmpty)
                 const _CalendarEmpty(message: 'No appointments on this day.')
               else
-                ...sections.expand(
-                  (section) => [
-                    _AppointmentSectionHeader(
-                      label: section.label,
-                      count: section.items.length,
-                      color: section.color,
-                    ),
-                    ...section.items.map(
+                ...[
+                  _AppointmentSectionHeader(
+                    label: _statusLabel(selectedStatus),
+                    count: visibleAppointments.length,
+                    color: _statusColor(selectedStatus),
+                  ),
+                  ...visibleAppointments.map(
                       (item) => _CalendarAppointment(
                         item: item,
                         onView: () => Navigator.push(
@@ -144,10 +137,11 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
             ],
+          );
+            },
           );
         },
       ),
@@ -161,16 +155,130 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
 
 }
 
-class _AppointmentSection {
-  const _AppointmentSection({
+class _AppointmentStatusTabs extends StatelessWidget {
+  const _AppointmentStatusTabs({
+    required this.selectedStatus,
+    required this.appointments,
+    required this.onChanged,
+  });
+  final String selectedStatus;
+  final List<CounselorAppointment> appointments;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEAF9EF),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        _StatusTab(
+          label: 'Confirmed',
+          count: appointments
+              .where(
+                (item) =>
+                    item.status == 'confirmed' ||
+                    item.status == 'rescheduled' ||
+                    item.status == 'completed' ||
+                    item.status == 'no_show',
+              )
+              .length,
+          color: dashboardGreen,
+          selected: selectedStatus == 'confirmed',
+          onTap: () => onChanged('confirmed'),
+        ),
+        _StatusTab(
+          label: 'Pending',
+          count: appointments
+              .where((item) => item.status == 'pending')
+              .length,
+          color: Colors.orange.shade700,
+          selected: selectedStatus == 'pending',
+          onTap: () => onChanged('pending'),
+        ),
+        _StatusTab(
+          label: 'Rejected',
+          count: appointments
+              .where((item) => item.status == 'rejected')
+              .length,
+          color: const Color(0xFFC62828),
+          selected: selectedStatus == 'rejected',
+          onTap: () => onChanged('rejected'),
+        ),
+      ],
+    ),
+  );
+}
+
+class _StatusTab extends StatelessWidget {
+  const _StatusTab({
     required this.label,
+    required this.count,
     required this.color,
-    required this.items,
+    required this.selected,
+    required this.onTap,
   });
   final String label;
+  final int count;
   final Color color;
-  final List<CounselorAppointment> items;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: selected
+              ? const [BoxShadow(color: Color(0x12000000), blurRadius: 4)]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? color : Colors.black54,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$count',
+              style: TextStyle(
+                color: selected ? color : Colors.black45,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
 }
+
+String _statusLabel(String value) => switch (value) {
+  'confirmed' => 'Confirmed',
+  'pending' => 'Pending',
+  'rejected' => 'Rejected',
+  _ => 'Appointments',
+};
+
+Color _statusColor(String value) => switch (value) {
+  'pending' => Colors.orange.shade700,
+  'rejected' => const Color(0xFFC62828),
+  _ => dashboardGreen,
+};
 
 class _AddAvailabilityDialog extends StatefulWidget {
   const _AddAvailabilityDialog({
@@ -352,6 +460,9 @@ class _AvailabilityField extends StatelessWidget {
 bool _sameDay(DateTime? a, DateTime b) =>
     a != null && a.year == b.year && a.month == b.month && a.day == b.day;
 
+bool _sameWeekday(String value, DateTime date) =>
+  value.trim().toLowerCase() == weekdayName(date.weekday).toLowerCase();
+
 String _timeRange(CounselorAppointment item) {
   final start = item.startAt;
   final end = item.endAt;
@@ -489,6 +600,7 @@ class _MonthCard extends StatelessWidget {
     required this.month,
     required this.selectedDay,
     required this.appointments,
+    required this.availability,
     required this.onPrevious,
     required this.onNext,
     required this.onDaySelected,
@@ -496,6 +608,7 @@ class _MonthCard extends StatelessWidget {
   final DateTime month;
   final DateTime selectedDay;
   final List<CounselorAppointment> appointments;
+  final List<CounselorAvailabilityModel> availability;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final ValueChanged<DateTime> onDaySelected;
@@ -559,9 +672,21 @@ class _MonthCard extends StatelessWidget {
               if (day < 1 || day > days) return const SizedBox();
               final date = DateTime(month.year, month.month, day);
               final selected = _sameDay(date, selectedDay);
-              final hasAppointment = appointments.any(
+              final markers = <Color>{};
+              for (final item in appointments.where(
                 (item) => _sameDay(item.startAt, date),
-              );
+              )) {
+                markers.add(
+                  item.status == 'rejected'
+                      ? const Color(0xFFC62828)
+                      : item.status == 'pending' || item.status == 'rescheduled'
+                      ? Colors.orange
+                      : dashboardGreen,
+                );
+              }
+              if (availability.any((item) => _sameWeekday(item.dayOfWeek, date))) {
+                markers.add(const Color(0xFF25B6D2));
+              }
               return InkWell(
                 onTap: () => onDaySelected(date),
                 child: Column(
@@ -586,14 +711,24 @@ class _MonthCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (hasAppointment)
-                      Container(
-                        width: 5,
-                        height: 5,
-                        decoration: const BoxDecoration(
-                          color: Colors.orange,
-                          shape: BoxShape.circle,
-                        ),
+                    if (markers.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: markers
+                            .map(
+                              (color) => Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 1),
+                                child: Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                   ],
                 ),
@@ -704,6 +839,8 @@ class _CalendarAppointment extends StatelessWidget {
             'Topic: ${item.reason}',
             style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
           ),
+          const SizedBox(height: 7),
+          _MoodLabel(item: item),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 10),
             child: Divider(height: 1, color: Color(0xFFE7EFEA)),
@@ -763,6 +900,41 @@ class _AppointmentChip extends StatelessWidget {
       ),
     ),
   );
+}
+
+class _MoodLabel extends StatelessWidget {
+  const _MoodLabel({required this.item});
+  final CounselorAppointment item;
+
+  @override
+  Widget build(BuildContext context) {
+    final mood = item.mood?.trim();
+    final score = item.moodScore;
+    final text = mood == null || mood.isEmpty
+        ? 'Mood not recorded'
+        : 'Mood: $mood${score == null ? '' : '  •  Score $score/10'}';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.mood_outlined,
+          size: 15,
+          color: mood == null || mood.isEmpty ? Colors.black45 : dashboardGreen,
+        ),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _LocationLabel extends StatelessWidget {

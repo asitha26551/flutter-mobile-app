@@ -369,6 +369,8 @@ class _NextAppointmentCard extends StatelessWidget {
             item.reason,
             style: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
+          const SizedBox(height: 8),
+          _MoodSummary(item: item),
           const SizedBox(height: 10),
           Text(
             item.sessionType,
@@ -452,6 +454,33 @@ class _CardChip extends StatelessWidget {
       ],
     ),
   );
+}
+
+class _MoodSummary extends StatelessWidget {
+  const _MoodSummary({required this.item});
+  final CounselorAppointment item;
+
+  @override
+  Widget build(BuildContext context) {
+    final mood = item.mood?.trim();
+    final score = item.moodScore;
+    return Row(
+      children: [
+        const Icon(Icons.mood_outlined, color: dashboardBright, size: 15),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            mood == null || mood.isEmpty
+                ? 'Mood not recorded'
+                : 'Mood: $mood${score == null ? '' : '  •  Score $score/10'}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 11),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _PriorityChip extends StatelessWidget {
@@ -639,6 +668,13 @@ class _AppointmentRow extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  item.mood?.isNotEmpty == true
+                      ? 'Mood: ${item.mood}${item.moodScore == null ? '' : ' (${item.moodScore}/10)'}'
+                      : 'Mood not recorded',
+                  style: const TextStyle(fontSize: 10, color: Colors.black54),
                 ),
                 Text(
                   item.location?.isNotEmpty == true

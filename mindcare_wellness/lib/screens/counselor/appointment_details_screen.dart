@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../models/appointment_model.dart';
@@ -11,7 +13,7 @@ import 'counselor_theme.dart';
 import 'notes/add_session_note_screen.dart';
 import 'notes/session_note_details_screen.dart';
 
-class AppointmentDetailsScreen extends StatelessWidget {
+class AppointmentDetailsScreen extends StatefulWidget {
   const AppointmentDetailsScreen({
     required this.item,
     required this.service,
@@ -21,80 +23,526 @@ class AppointmentDetailsScreen extends StatelessWidget {
   final CounselorService service;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: dashboardMint,
-    appBar: AppBar(
+  State<AppointmentDetailsScreen> createState() =>
+      _AppointmentDetailsScreenState();
+}
+
+class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
+  final _appointmentService = AppointmentService();
+  final _noteService = SessionNoteService();
+  final _noteController = TextEditingController();
+  Timer? _timer;
+  DateTime? _sessionStartedAt;
+  SessionNoteModel? _existingNote;
+  bool _active = false;
+  bool _saving = false;
+  bool _loadingNote = false;
+
+  CounselorAppointment get item => widget.item;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCurrentNote();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadCurrentNote() async {
+    setState(() => _loadingNote = true);
+    try {
+      final notes = await _noteService.forAppointment(item.id).first;
+      if (!mounted) return;
+      final sorted = [...notes]
+        ..sort(
+          (a, b) => (b.createdAt ?? DateTime(1970)).compareTo(
+            a.createdAt ?? DateTime(1970),
+          ),
+        );
+      if (sorted.isNotEmpty) {
+        _existingNote = sorted.first;
+        _noteController.text = sorted.first.note;
+      }
+    } finally {
+      if (mounted) setState(() => _loadingNote = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authorized = item.counselorId == widget.service.uid;
+    return Scaffold(
       backgroundColor: dashboardMint,
-      foregroundColor: dashboardInk,
-      elevation: 0,
-      title: const Text(
-        'Appointment details',
-        style: TextStyle(fontWeight: FontWeight.w800),
+      body: SafeArea(
+        top: true,
+        bottom: false,
+        child: !authorized
+            ? const _AccessDenied()
+            : _active
+            ? _buildActiveWorkspace()
+            : _buildAppointmentDetails(),
       ),
-    ),
-    body: ListView(
-      padding: const EdgeInsets.all(18),
-      children: [
-        _WorkspaceHeader(status: item.status),
-        const SizedBox(height: 12),
-        _StudentIdentityCard(item: item),
-        const SizedBox(height: 12),
-        _AppointmentInfoCard(item: item),
-        const SizedBox(height: 12),
-        _ClinicalSummaryCard(item: item),
-        if (item.meetingLink?.isNotEmpty == true) ...[
-          const SizedBox(height: 12),
-          _Detail(label: 'Meeting link', value: item.meetingLink!),
-        ],
-        const SizedBox(height: 6),
-        _AppointmentNotes(item: item),
-        if (item.status == 'pending') ...[
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: () => _update(context, 'confirmed'),
-                  icon: const Icon(Icons.check),
-                  label: const Text('Accept'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => _update(context, 'rejected'),
-                  icon: const Icon(Icons.close),
-                  label: const Text('Decline'),
-                ),
-              ),
+    );
+  }
+
+  Widget _buildAppointmentDetails() => Column(
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: _WorkspaceHeader(status: item.status),
+      ),
+      Expanded(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          children: [
+            _WorkspaceStatus(item: item),
+            const SizedBox(height: 12),
+            _StudentIdentityCard(item: item),
+            const SizedBox(height: 12),
+            _AppointmentInfoCard(item: item),
+            const SizedBox(height: 12),
+            _ClinicalSummaryCard(item: item),
+            const SizedBox(height: 12),
+            _AppointmentNotes(item: item),
+            if (item.status == 'pending') ...[
+              const SizedBox(height: 18),
+              _PendingActions(onUpdate: _update),
             ],
+            if (item.status == 'completed') ...[
+              const SizedBox(height: 18),
+              _SessionNoteAction(item: item),
+            ],
+          ],
+        ),
+      ),
+      if (item.status == 'confirmed' || item.status == 'rescheduled')
+        Material(
+          color: Colors.white,
+          elevation: 8,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+              child: _SessionActions(
+                onStart: _startSession,
+                onReschedule: _reschedule,
+                onCancel: _cancel,
+                onNoShow: _canMarkNoShow ? _markNoShow : null,
+              ),
+            ),
           ),
-        ],
-        if (item.status == 'confirmed') ...[
-          const SizedBox(height: 18),
-          FilledButton.icon(
-            onPressed: () => _update(context, 'completed'),
-            icon: const Icon(Icons.check_circle_outline),
-            label: const Text('Mark completed'),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: () => _update(context, 'no_show'),
-            icon: const Icon(Icons.person_off_outlined),
-            label: const Text('Mark no show'),
-          ),
-        ],
-        if (item.status == 'completed') ...[
-          const SizedBox(height: 22),
-          _SessionNoteAction(item: item),
-        ],
-      ],
-    ),
+        ),
+    ],
   );
 
-  Future<void> _update(BuildContext context, String status) async {
-    await AppointmentService().updateCounselorStatus(item.id, status);
-    if (context.mounted) Navigator.pop(context);
+  Widget _buildActiveWorkspace() => Column(
+    children: [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: _WorkspaceHeader(status: 'active'),
+      ),
+      Expanded(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          children: [
+            _WorkspaceStatus(item: item, active: true, startedAt: _sessionStartedAt),
+            const SizedBox(height: 12),
+            _StudentIdentityCard(item: item),
+            const SizedBox(height: 12),
+            _AppointmentInfoCard(item: item),
+            const SizedBox(height: 12),
+            _ClinicalSummaryCard(item: item),
+            const SizedBox(height: 12),
+            _SessionNotesPanel(
+              controller: _noteController,
+              loading: _loadingNote,
+              saving: _saving,
+              elapsed: _elapsed,
+              duration: _duration,
+              onSave: _saveNote,
+            ),
+          ],
+        ),
+      ),
+      Material(
+        color: Colors.white,
+        elevation: 8,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showPastNotes(context),
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('Past Notes'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: _saving ? null : _stopSession,
+                    icon: const Icon(Icons.stop_circle_outlined),
+                    label: const Text('Stop Session'),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD62828)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+
+  Duration get _elapsed => _sessionStartedAt == null
+      ? Duration.zero
+      : DateTime.now().difference(_sessionStartedAt!);
+
+  Duration get _duration {
+    if (item.startAt == null || item.endAt == null) {
+      return const Duration(minutes: 45);
+    }
+    return item.endAt!.difference(item.startAt!);
+  }
+
+  bool get _canStart => item.status == 'confirmed' || item.status == 'rescheduled';
+  bool get _canMarkNoShow =>
+      item.startAt != null && DateTime.now().difference(item.startAt!).inMinutes >= 15;
+
+  Future<void> _startSession() async {
+    if (!_canStart) return;
+    setState(() {
+      _active = true;
+      _sessionStartedAt = DateTime.now();
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  Future<void> _saveNote() async {
+    final note = _noteController.text.trim();
+    if (note.isEmpty || _saving) return;
+    setState(() => _saving = true);
+    try {
+      if (_existingNote == null) {
+        final id = await _noteService.create(
+          appointmentId: item.id,
+          studentId: item.studentId,
+          note: note,
+        );
+        _existingNote = SessionNoteModel(
+          id: id,
+          appointmentId: item.id,
+          studentId: item.studentId,
+          counselorId: item.counselorId,
+          note: note,
+        );
+      } else {
+        await _noteService.update(_existingNote!.id, note: note);
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Note saved')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _stopSession() async {
+    final confirmed = await _confirm(
+      'End Session?',
+      'Save the current note and end this counseling session?',
+    );
+    if (!confirmed) return;
+    await _saveNote();
+    await _appointmentService.complete(item.id);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _cancel() async {
+    final confirmed = await _confirm(
+      'Cancel Appointment?',
+      'Are you sure you want to cancel this appointment?',
+    );
+    if (!confirmed) return;
+    await _appointmentService.cancel(item.id, reason: 'Cancelled by counselor');
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _reschedule() async {
+    final base = item.startAt ?? DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: base.isBefore(DateTime.now()) ? DateTime.now() : base,
+    );
+    if (date == null || !mounted) return;
+    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(base));
+    if (time == null) return;
+    final start = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final duration = _duration;
+    await _appointmentService.reschedule(item.id, startAt: start, endAt: start.add(duration));
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _markNoShow() async {
+    await _appointmentService.markNoShow(item.id);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<void> _update(String status) async {
+    await _appointmentService.updateCounselorStatus(item.id, status);
+    if (mounted) Navigator.pop(context);
+  }
+
+  Future<bool> _confirm(String title, String message) async =>
+      await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(title),
+          content: Text(message),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
+          ],
+        ),
+      ) ??
+      false;
+
+  void _showPastNotes(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SessionNoteDetailsScreen(
+          entry: SessionNoteEntry(
+            note: _existingNote ??
+                SessionNoteModel(
+                  id: '',
+                  appointmentId: item.id,
+                  studentId: item.studentId,
+                  counselorId: item.counselorId,
+                  note: '',
+                ),
+            appointment: AppointmentModel.fromMap(item.id, item.data),
+          ),
+        ),
+      ),
+    );
+  }
+
+}
+
+class _AccessDenied extends StatelessWidget {
+  const _AccessDenied();
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.lock_outline, color: dashboardGreen, size: 42),
+          const SizedBox(height: 12),
+          const Text(
+            "You don't have permission to view this appointment.",
+            textAlign: TextAlign.center,
+            style: TextStyle(color: dashboardInk, fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Back')),
+        ],
+      ),
+    ),
+  );
+}
+
+class _WorkspaceStatus extends StatelessWidget {
+  const _WorkspaceStatus({required this.item, this.active = false, this.startedAt});
+  final CounselorAppointment item;
+  final bool active;
+  final DateTime? startedAt;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = active
+        ? 'LIVE NOW'
+        : item.startAt == null
+        ? 'TIME NOT SET'
+        : DateTime.now().isAfter(item.endAt ?? item.startAt!)
+        ? 'SESSION ENDED'
+        : 'ACTIVE WORKSPACE';
+    final trailing = active
+        ? 'Session started'
+        : _timeUntil(item.startAt);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFFD5F8DF) : const Color(0xFFEAF9EF),
+        borderRadius: BorderRadius.circular(11),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.circle, color: active ? dashboardGreen : Colors.orange, size: 9),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(label, style: const TextStyle(color: dashboardGreen, fontSize: 11, fontWeight: FontWeight.w900)),
+          ),
+          Text(trailing, style: const TextStyle(color: dashboardGreen, fontSize: 11, fontWeight: FontWeight.w800)),
+        ],
+      ),
+    );
+  }
+}
+
+String _timeUntil(DateTime? start) {
+  if (start == null) return 'Time not set';
+  final difference = start.difference(DateTime.now());
+  if (difference.isNegative) return 'Started';
+  final minutes = difference.inMinutes;
+  return minutes < 1 ? 'Starting now' : 'In $minutes mins';
+}
+
+class _PendingActions extends StatelessWidget {
+  const _PendingActions({required this.onUpdate});
+  final Future<void> Function(String status) onUpdate;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: FilledButton.icon(
+          onPressed: () => onUpdate('confirmed'),
+          icon: const Icon(Icons.check),
+          label: const Text('Accept'),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: OutlinedButton.icon(
+          onPressed: () => onUpdate('rejected'),
+          icon: const Icon(Icons.close),
+          label: const Text('Decline'),
+        ),
+      ),
+    ],
+  );
+}
+
+class _SessionActions extends StatelessWidget {
+  const _SessionActions({
+    required this.onStart,
+    required this.onReschedule,
+    required this.onCancel,
+    required this.onNoShow,
+  });
+  final VoidCallback onStart;
+  final VoidCallback onReschedule;
+  final VoidCallback onCancel;
+  final VoidCallback? onNoShow;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    children: [
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: onStart,
+          icon: const Icon(Icons.play_arrow),
+          label: const Text('START SESSION'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          ),
+        ),
+      ),
+      const SizedBox(height: 9),
+      Row(
+        children: [
+          Expanded(child: OutlinedButton.icon(onPressed: onReschedule, icon: const Icon(Icons.schedule), label: const Text('Reschedule'))),
+          const SizedBox(width: 9),
+          Expanded(child: OutlinedButton.icon(onPressed: onCancel, icon: const Icon(Icons.event_busy_outlined), label: const Text('Cancel'))),
+        ],
+      ),
+      if (onNoShow != null) ...[
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: onNoShow,
+          icon: const Icon(Icons.person_off_outlined, size: 16),
+          label: const Text('Mark as Student No-Show'),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFFD62828)),
+        ),
+      ],
+    ],
+  );
+}
+
+class _SessionNotesPanel extends StatelessWidget {
+  const _SessionNotesPanel({
+    required this.controller,
+    required this.loading,
+    required this.saving,
+    required this.elapsed,
+    required this.duration,
+    required this.onSave,
+  });
+  final TextEditingController controller;
+  final bool loading;
+  final bool saving;
+  final Duration elapsed;
+  final Duration duration;
+  final VoidCallback onSave;
+
+  @override
+  Widget build(BuildContext context) {
+    final elapsedText = '${elapsed.inMinutes.toString().padLeft(2, '0')}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}';
+    return _DetailsPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.edit_note_outlined, color: dashboardGreen),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('Session Notes', style: TextStyle(color: dashboardInk, fontSize: 16, fontWeight: FontWeight.w800))),
+              _DetailsChip(label: 'Timer: $elapsedText / ${duration.inMinutes}m', color: dashboardGreen),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: controller,
+            enabled: !loading && !saving,
+            minLines: 7,
+            maxLines: 12,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(hintText: 'Add session notes...', alignLabelWithHint: true),
+          ),
+          const SizedBox(height: 8),
+          const Text('Private session notes', style: TextStyle(color: Colors.black54, fontSize: 11)),
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: saving ? null : onSave,
+              icon: saving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.add, size: 17),
+              label: Text(saving ? 'Saving...' : 'Add Note'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -103,42 +551,50 @@ class _WorkspaceHeader extends StatelessWidget {
   final String status;
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      IconButton(
-        onPressed: () => Navigator.pop(context),
-        tooltip: 'Back',
-        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-      ),
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'COUNSELOR PORTAL',
-              style: TextStyle(
-                color: dashboardGreen,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .6,
-              ),
-            ),
-            Text(
-              'Active Session Workspace',
-              style: TextStyle(
-                color: dashboardInk,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
+  Widget build(BuildContext context) => SizedBox(
+    height: 62,
+    child: Row(
+      children: [
+        IconButton(
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Back',
+          padding: const EdgeInsets.all(12),
+          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
         ),
-      ),
-      _DetailsChip(
-        label: status == 'confirmed' ? 'ACTIVE' : appointmentStatusLabel(status),
-        color: status == 'rejected' ? const Color(0xFFC62828) : dashboardGreen,
-      ),
-    ],
+        const Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'COUNSELOR PORTAL',
+                style: TextStyle(
+                  color: dashboardGreen,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .6,
+                ),
+              ),
+              Text(
+                'Active Session Workspace',
+                style: TextStyle(
+                  color: dashboardInk,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        _DetailsChip(
+          label: status == 'confirmed' ? 'ACTIVE' : appointmentStatusLabel(status),
+          color: status == 'rejected' ? const Color(0xFFC62828) : dashboardGreen,
+        ),
+        const SizedBox(width: 4),
+      ],
+    ),
   );
 }
 
@@ -455,7 +911,13 @@ class _AppointmentNotesState extends State<_AppointmentNotes> {
 
   @override
   Widget build(BuildContext context) => StreamBuilder<List<SessionNoteModel>>(
-    stream: SessionNoteService().forStudent(widget.item.studentId),
+    stream: SessionNoteService()
+        .forCounselor()
+        .map(
+          (notes) => notes
+              .where((note) => note.studentId == widget.item.studentId)
+              .toList(),
+        ),
     builder: (context, snapshot) {
       final notes = [...snapshot.data ?? const <SessionNoteModel>[]]
         ..sort(
@@ -588,35 +1050,3 @@ class _SummaryPreview extends StatelessWidget {
 
 String _summaryDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-
-class _Detail extends StatelessWidget {
-  const _Detail({required this.label, required this.value});
-  final String label;
-  final String value;
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            color: Colors.black54,
-            fontSize: 10,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: const TextStyle(
-            color: dashboardInk,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      ],
-    ),
-  );
-}
