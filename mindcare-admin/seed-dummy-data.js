@@ -19,6 +19,9 @@ const students = [
   ['student-test-006', 'Sofia Raman', 'sofia.raman+mindcare-test@example.com', 'MC-ST-2606', 'Faculty of Health Sciences', 'Public Health', 'BSc Public Health', 'Year 3', '2024/2025'],
 ].map(([uid, fullName, email, studentId, faculty, department, degreeProgram, academicYear, batch]) => ({
   uid, fullName, email, studentId, faculty, department, degreeProgram, academicYear, batch,
+  alias: `Student#${studentId.slice(-4)}`,
+  priorityLevel: 'normal',
+  authorizedCounselorIds: [COUNSELOR_ID],
   phoneNumber: '+94 70 555 01' + uid.slice(-1),
   whatsappNumber: '+94 71 555 01' + uid.slice(-1),
   enrollmentStatus: 'active',

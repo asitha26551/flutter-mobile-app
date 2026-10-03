@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import '../../models/appointment_model.dart';
 import '../../models/counselor_models.dart';
 import '../../models/session_note_model.dart';
+import '../../models/student_model.dart';
 import '../../services/appointment_service.dart';
 import '../../services/counselor_service.dart';
 import '../../services/session_note_service.dart';
+import '../../services/student_service.dart';
 import 'counselor_helpers.dart';
 import 'counselor_theme.dart';
 import 'notes/add_session_note_screen.dart';
@@ -30,6 +32,7 @@ class AppointmentDetailsScreen extends StatefulWidget {
 class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   final _appointmentService = AppointmentService();
   final _noteService = SessionNoteService();
+  final _studentService = StudentService();
   final _noteController = TextEditingController();
   Timer? _timer;
   DateTime? _sessionStartedAt;
@@ -37,6 +40,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   bool _active = false;
   bool _saving = false;
   bool _loadingNote = false;
+  StudentModel? _student;
+  bool _prioritySaving = false;
 
   CounselorAppointment get item => widget.item;
 
@@ -44,6 +49,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   void initState() {
     super.initState();
     _loadCurrentNote();
+    _loadStudentProfile();
   }
 
   @override
@@ -70,6 +76,15 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       }
     } finally {
       if (mounted) setState(() => _loadingNote = false);
+    }
+  }
+
+  Future<void> _loadStudentProfile() async {
+    try {
+      final student = await _studentService.get(item.studentId);
+      if (mounted) setState(() => _student = student);
+    } catch (_) {
+      // The alias fallback remains visible if the counselor lacks profile access.
     }
   }
 
@@ -102,11 +117,14 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
           children: [
             _WorkspaceStatus(item: item),
             const SizedBox(height: 12),
-            _StudentIdentityCard(item: item),
+            _StudentIdentityCard(item: item, student: _student),
             const SizedBox(height: 12),
             _AppointmentInfoCard(item: item),
             const SizedBox(height: 12),
-            _ClinicalSummaryCard(item: item),
+            _ClinicalSummaryCard(
+              item: item,
+              priorityLevel: _student?.priorityLevel ?? 'normal',
+            ),
             const SizedBox(height: 12),
             _AppointmentNotes(item: item),
             if (item.status == 'pending') ...[
@@ -150,13 +168,26 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
           children: [
-            _WorkspaceStatus(item: item, active: true, startedAt: _sessionStartedAt),
+            _WorkspaceStatus(
+              item: item,
+              active: true,
+              startedAt: _sessionStartedAt,
+            ),
             const SizedBox(height: 12),
-            _StudentIdentityCard(item: item),
+            _StudentIdentityCard(item: item, student: _student),
             const SizedBox(height: 12),
             _AppointmentInfoCard(item: item),
             const SizedBox(height: 12),
-            _ClinicalSummaryCard(item: item),
+            _ClinicalSummaryCard(
+              item: item,
+              priorityLevel: _student?.priorityLevel ?? 'normal',
+            ),
+            const SizedBox(height: 12),
+            _PriorityControl(
+              highPriority: _student?.isHighPriority ?? false,
+              saving: _prioritySaving,
+              onChanged: _setPriority,
+            ),
             const SizedBox(height: 12),
             _SessionNotesPanel(
               controller: _noteController,
@@ -191,7 +222,9 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
                     onPressed: _saving ? null : _stopSession,
                     icon: const Icon(Icons.stop_circle_outlined),
                     label: const Text('Stop Session'),
-                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD62828)),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFFD62828),
+                    ),
                   ),
                 ),
               ],
@@ -213,9 +246,11 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
     return item.endAt!.difference(item.startAt!);
   }
 
-  bool get _canStart => item.status == 'confirmed' || item.status == 'rescheduled';
+  bool get _canStart =>
+      item.status == 'confirmed' || item.status == 'rescheduled';
   bool get _canMarkNoShow =>
-      item.startAt != null && DateTime.now().difference(item.startAt!).inMinutes >= 15;
+      item.startAt != null &&
+      DateTime.now().difference(item.startAt!).inMinutes >= 15;
 
   Future<void> _startSession() async {
     if (!_canStart) return;
@@ -250,12 +285,58 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
         await _noteService.update(_existingNote!.id, note: note);
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Note saved')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Note saved')));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _setPriority(bool highPriority) async {
+    if (_prioritySaving) return;
+    setState(() => _prioritySaving = true);
+    try {
+      await _studentService.updatePriority(
+        studentId: item.studentId,
+        priorityLevel: highPriority ? 'high' : 'normal',
+      );
+      if (mounted) {
+        setState(() {
+          _student = StudentModel(
+            uid: _student?.uid ?? item.studentId,
+            studentId: _student?.studentId,
+            alias: _student?.alias,
+            faculty: _student?.faculty,
+            department: _student?.department,
+            degreeProgram: _student?.degreeProgram,
+            academicYear: _student?.academicYear,
+            batch: _student?.batch,
+            priorityLevel: highPriority ? 'high' : 'normal',
+            createdAt: _student?.createdAt,
+            updatedAt: _student?.updatedAt,
+          );
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              highPriority
+                  ? 'Student marked high priority.'
+                  : 'Priority returned to normal.',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to update student priority.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _prioritySaving = false);
     }
   }
 
@@ -289,11 +370,24 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       initialDate: base.isBefore(DateTime.now()) ? DateTime.now() : base,
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(base));
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(base),
+    );
     if (time == null) return;
-    final start = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final start = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
     final duration = _duration;
-    await _appointmentService.reschedule(item.id, startAt: start, endAt: start.add(duration));
+    await _appointmentService.reschedule(
+      item.id,
+      startAt: start,
+      endAt: start.add(duration),
+    );
     if (mounted) Navigator.pop(context);
   }
 
@@ -314,8 +408,14 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
           title: Text(title),
           content: Text(message),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Confirm')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Keep'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Confirm'),
+            ),
           ],
         ),
       ) ??
@@ -327,7 +427,8 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       MaterialPageRoute(
         builder: (_) => SessionNoteDetailsScreen(
           entry: SessionNoteEntry(
-            note: _existingNote ??
+            note:
+                _existingNote ??
                 SessionNoteModel(
                   id: '',
                   appointmentId: item.id,
@@ -341,7 +442,6 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       ),
     );
   }
-
 }
 
 class _AccessDenied extends StatelessWidget {
@@ -359,10 +459,17 @@ class _AccessDenied extends StatelessWidget {
           const Text(
             "You don't have permission to view this appointment.",
             textAlign: TextAlign.center,
-            style: TextStyle(color: dashboardInk, fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: dashboardInk,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 16),
-          OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Back')),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Back'),
+          ),
         ],
       ),
     ),
@@ -370,7 +477,11 @@ class _AccessDenied extends StatelessWidget {
 }
 
 class _WorkspaceStatus extends StatelessWidget {
-  const _WorkspaceStatus({required this.item, this.active = false, this.startedAt});
+  const _WorkspaceStatus({
+    required this.item,
+    this.active = false,
+    this.startedAt,
+  });
   final CounselorAppointment item;
   final bool active;
   final DateTime? startedAt;
@@ -384,9 +495,7 @@ class _WorkspaceStatus extends StatelessWidget {
         : DateTime.now().isAfter(item.endAt ?? item.startAt!)
         ? 'SESSION ENDED'
         : 'ACTIVE WORKSPACE';
-    final trailing = active
-        ? 'Session started'
-        : _timeUntil(item.startAt);
+    final trailing = active ? 'Session started' : _timeUntil(item.startAt);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -395,12 +504,30 @@ class _WorkspaceStatus extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Icon(Icons.circle, color: active ? dashboardGreen : Colors.orange, size: 9),
+          Icon(
+            Icons.circle,
+            color: active ? dashboardGreen : Colors.orange,
+            size: 9,
+          ),
           const SizedBox(width: 7),
           Expanded(
-            child: Text(label, style: const TextStyle(color: dashboardGreen, fontSize: 11, fontWeight: FontWeight.w900)),
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: dashboardGreen,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
           ),
-          Text(trailing, style: const TextStyle(color: dashboardGreen, fontSize: 11, fontWeight: FontWeight.w800)),
+          Text(
+            trailing,
+            style: const TextStyle(
+              color: dashboardGreen,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ],
       ),
     );
@@ -471,9 +598,21 @@ class _SessionActions extends StatelessWidget {
       const SizedBox(height: 9),
       Row(
         children: [
-          Expanded(child: OutlinedButton.icon(onPressed: onReschedule, icon: const Icon(Icons.schedule), label: const Text('Reschedule'))),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: onReschedule,
+              icon: const Icon(Icons.schedule),
+              label: const Text('Reschedule'),
+            ),
+          ),
           const SizedBox(width: 9),
-          Expanded(child: OutlinedButton.icon(onPressed: onCancel, icon: const Icon(Icons.event_busy_outlined), label: const Text('Cancel'))),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: onCancel,
+              icon: const Icon(Icons.event_busy_outlined),
+              label: const Text('Cancel'),
+            ),
+          ),
         ],
       ),
       if (onNoShow != null) ...[
@@ -507,7 +646,8 @@ class _SessionNotesPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final elapsedText = '${elapsed.inMinutes.toString().padLeft(2, '0')}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}';
+    final elapsedText =
+        '${elapsed.inMinutes.toString().padLeft(2, '0')}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}';
     return _DetailsPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,8 +656,20 @@ class _SessionNotesPanel extends StatelessWidget {
             children: [
               const Icon(Icons.edit_note_outlined, color: dashboardGreen),
               const SizedBox(width: 8),
-              const Expanded(child: Text('Session Notes', style: TextStyle(color: dashboardInk, fontSize: 16, fontWeight: FontWeight.w800))),
-              _DetailsChip(label: 'Timer: $elapsedText / ${duration.inMinutes}m', color: dashboardGreen),
+              const Expanded(
+                child: Text(
+                  'Session Notes',
+                  style: TextStyle(
+                    color: dashboardInk,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              _DetailsChip(
+                label: 'Timer: $elapsedText / ${duration.inMinutes}m',
+                color: dashboardGreen,
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -527,16 +679,31 @@ class _SessionNotesPanel extends StatelessWidget {
             minLines: 7,
             maxLines: 12,
             textCapitalization: TextCapitalization.sentences,
-            decoration: const InputDecoration(hintText: 'Add session notes...', alignLabelWithHint: true),
+            decoration: const InputDecoration(
+              hintText: 'Add session notes...',
+              alignLabelWithHint: true,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text('Private session notes', style: TextStyle(color: Colors.black54, fontSize: 11)),
+          const Text(
+            'Private session notes',
+            style: TextStyle(color: Colors.black54, fontSize: 11),
+          ),
           const SizedBox(height: 8),
           Align(
             alignment: Alignment.centerRight,
             child: FilledButton.icon(
               onPressed: saving ? null : onSave,
-              icon: saving ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Icon(Icons.add, size: 17),
+              icon: saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Icon(Icons.add, size: 17),
               label: Text(saving ? 'Saving...' : 'Add Note'),
             ),
           ),
@@ -589,8 +756,12 @@ class _WorkspaceHeader extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         _DetailsChip(
-          label: status == 'confirmed' ? 'ACTIVE' : appointmentStatusLabel(status),
-          color: status == 'rejected' ? const Color(0xFFC62828) : dashboardGreen,
+          label: status == 'confirmed'
+              ? 'ACTIVE'
+              : appointmentStatusLabel(status),
+          color: status == 'rejected'
+              ? const Color(0xFFC62828)
+              : dashboardGreen,
         ),
         const SizedBox(width: 4),
       ],
@@ -599,8 +770,9 @@ class _WorkspaceHeader extends StatelessWidget {
 }
 
 class _StudentIdentityCard extends StatelessWidget {
-  const _StudentIdentityCard({required this.item});
+  const _StudentIdentityCard({required this.item, this.student});
   final CounselorAppointment item;
+  final StudentModel? student;
 
   @override
   Widget build(BuildContext context) => _DetailsPanel(
@@ -621,7 +793,9 @@ class _StudentIdentityCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                item.studentAlias,
+                student?.alias?.trim().isNotEmpty == true
+                    ? student!.alias!
+                    : item.studentAlias,
                 style: const TextStyle(
                   color: dashboardInk,
                   fontSize: 18,
@@ -633,6 +807,13 @@ class _StudentIdentityCard extends StatelessWidget {
                 'Student account',
                 style: TextStyle(color: Colors.black54, fontSize: 12),
               ),
+              if (student?.faculty?.isNotEmpty == true)
+                Text(
+                  '${student!.faculty}${student!.academicYear?.isNotEmpty == true ? '  •  ${student!.academicYear}' : ''}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.black54, fontSize: 11),
+                ),
             ],
           ),
         ),
@@ -675,8 +856,9 @@ class _AppointmentInfoCard extends StatelessWidget {
 }
 
 class _ClinicalSummaryCard extends StatelessWidget {
-  const _ClinicalSummaryCard({required this.item});
+  const _ClinicalSummaryCard({required this.item, required this.priorityLevel});
   final CounselorAppointment item;
+  final String priorityLevel;
 
   @override
   Widget build(BuildContext context) => _DetailsPanel(
@@ -685,7 +867,11 @@ class _ClinicalSummaryCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            const Icon(Icons.assignment_outlined, color: dashboardGreen, size: 19),
+            const Icon(
+              Icons.assignment_outlined,
+              color: dashboardGreen,
+              size: 19,
+            ),
             const SizedBox(width: 8),
             const Expanded(
               child: Text(
@@ -698,8 +884,10 @@ class _ClinicalSummaryCard extends StatelessWidget {
               ),
             ),
             _DetailsChip(
-              label: item.status == 'rejected' ? 'REVIEW' : 'PRIORITY: NORMAL',
-              color: item.status == 'rejected'
+              label: priorityLevel == 'high'
+                  ? 'PRIORITY: HIGH'
+                  : 'PRIORITY: NORMAL',
+              color: priorityLevel == 'high'
                   ? const Color(0xFFC62828)
                   : dashboardGreen,
             ),
@@ -741,6 +929,43 @@ class _ClinicalSummaryCard extends StatelessWidget {
   );
 }
 
+class _PriorityControl extends StatelessWidget {
+  const _PriorityControl({
+    required this.highPriority,
+    required this.saving,
+    required this.onChanged,
+  });
+  final bool highPriority;
+  final bool saving;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) => _DetailsPanel(
+    child: Material(
+      color: Colors.transparent,
+      child: CheckboxListTile(
+        contentPadding: EdgeInsets.zero,
+        value: highPriority,
+        onChanged: saving ? null : (value) => onChanged(value ?? false),
+        activeColor: dashboardGreen,
+        title: const Text(
+          'Mark student as high priority',
+          style: TextStyle(
+            color: dashboardInk,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        subtitle: const Text(
+          'Only authorized counselors can change this status.',
+          style: TextStyle(color: Colors.black54, fontSize: 11),
+        ),
+        secondary: const Icon(Icons.priority_high, color: dashboardGreen),
+      ),
+    ),
+  );
+}
+
 class _DetailsPanel extends StatelessWidget {
   const _DetailsPanel({required this.child});
   final Widget child;
@@ -771,11 +996,7 @@ class _DetailsChip extends StatelessWidget {
     ),
     child: Text(
       label,
-      style: TextStyle(
-        color: color,
-        fontSize: 10,
-        fontWeight: FontWeight.w800,
-      ),
+      style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w800),
     ),
   );
 }
@@ -839,9 +1060,19 @@ String _detailDate(DateTime? date) => date == null
     : '${date.day.toString().padLeft(2, '0')} ${_monthName(date.month)} ${date.year}';
 
 String _monthName(int month) => const [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ][month - 1];
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+][month - 1];
 
 String _detailSessionType(String value) => switch (value) {
   'in_person' => 'In-Person',
@@ -911,13 +1142,11 @@ class _AppointmentNotesState extends State<_AppointmentNotes> {
 
   @override
   Widget build(BuildContext context) => StreamBuilder<List<SessionNoteModel>>(
-    stream: SessionNoteService()
-        .forCounselor()
-        .map(
-          (notes) => notes
-              .where((note) => note.studentId == widget.item.studentId)
-              .toList(),
-        ),
+    stream: SessionNoteService().forCounselor().map(
+      (notes) => notes
+          .where((note) => note.studentId == widget.item.studentId)
+          .toList(),
+    ),
     builder: (context, snapshot) {
       final notes = [...snapshot.data ?? const <SessionNoteModel>[]]
         ..sort(

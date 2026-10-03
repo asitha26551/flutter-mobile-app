@@ -36,6 +36,8 @@ class UserService {
     batch.set(_firestore.collection('students').doc(uid), {
       ...studentData,
       'uid': uid,
+      'priorityLevel': studentData['priorityLevel'] ?? 'normal',
+      'authorizedCounselorIds': const <String>[],
       'createdAt': now,
       'updatedAt': now,
     });
