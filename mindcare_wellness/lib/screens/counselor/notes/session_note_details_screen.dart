@@ -101,38 +101,59 @@ class SessionNoteDetailsScreen extends StatelessWidget {
           const SizedBox(height: 18),
 
           // ── Consultation History section ──
-          _SectionHeader(
-            label: 'CONSULTATION HISTORY',
-            icon: Icons.history,
-            badge: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${previousEntries.length + 1} Records Logged',
-                style: const TextStyle(
-                  color: Colors.black54,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
-              ),
+              ],
             ),
-          ),
-          const SizedBox(height: 10),
+            child: Column(
+              children: [
+                _SectionHeader(
+                  label: 'CONSULTATION HISTORY',
+                  icon: Icons.history,
+                  badge: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF7ED),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${previousEntries.length + 1} Records Logged',
+                      style: const TextStyle(
+                        color: Color(0xFF55705D),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
 
-          // Latest entry in history
-          _HistorySessionCard(entry: entry, isFirst: true),
+                // Latest entry in history
+                _HistorySessionCard(entry: entry, isFirst: true),
 
-          // Previous entries
-          ...previousEntries.asMap().entries.map(
-            (mapEntry) => Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: _HistorySessionCard(
-                entry: mapEntry.value,
-                isFirst: false,
-              ),
+                // Previous entries
+                ...previousEntries.asMap().entries.map(
+                  (mapEntry) => Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: _HistorySessionCard(
+                      entry: mapEntry.value,
+                      isFirst: false,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -537,18 +558,23 @@ class _HistorySessionCard extends StatelessWidget {
               ),
               Text(
                 _shortMonthDate(date),
-                style: const TextStyle(color: Colors.black45, fontSize: 10),
+                style: const TextStyle(
+                  color: Colors.black54,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
           const SizedBox(height: 6),
           // Session type + duration
-          Padding(
-            padding: const EdgeInsets.only(left: 32),
-            child: Text(
-              '${_durationLabel(appointment)}  •  ${_sessionType(appointment?.sessionType)}'
-              '${appointment?.location?.trim().isNotEmpty == true ? '  •  ${appointment!.location}' : ''}',
-              style: const TextStyle(color: Colors.black54, fontSize: 10),
+          Text(
+            '${_durationLabel(appointment)}  •  ${_sessionType(appointment?.sessionType)}'
+            '${appointment?.location?.trim().isNotEmpty == true ? '  •  ${appointment!.location}' : ''}',
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 11,
+              height: 1.3,
             ),
           ),
           const SizedBox(height: 8),
@@ -564,7 +590,7 @@ class _HistorySessionCard extends StatelessWidget {
               noteText.isEmpty ? 'No note content recorded.' : noteText,
               style: const TextStyle(
                 color: dashboardInk,
-                fontSize: 11,
+                fontSize: 12,
                 height: 1.45,
               ),
             ),
