@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/appointment_model.dart';
 import '../../../models/session_note_model.dart';
 import '../../../services/counselor_service.dart';
 import '../../../services/session_note_service.dart';
@@ -400,6 +401,16 @@ class _StudentNoteCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  'Reason: ${_appointmentReason(appointment)}',
+                  style: const TextStyle(
+                    color: dashboardInk,
+                    fontSize: 11,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 7),
                 Text(
                   noteText.isEmpty ? 'No note content.' : noteText,
@@ -446,6 +457,11 @@ class _StudentNoteCard extends StatelessWidget {
       ),
     );
   }
+}
+
+String _appointmentReason(AppointmentModel? appointment) {
+  final reason = appointment?.reason?.trim();
+  return reason == null || reason.isEmpty ? 'Reason not specified' : reason;
 }
 
 class _NotesError extends StatelessWidget {

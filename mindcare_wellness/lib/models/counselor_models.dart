@@ -32,6 +32,11 @@ class CounselorAppointment {
   String get reason => data['reason'] as String? ?? 'Counseling session';
   String? get location => data['location'] as String?;
   String? get meetingLink => data['meetingLink'] as String?;
+  String? get mood =>
+      data['mood'] as String? ?? data['studentMood'] as String?;
+  int? get moodScore =>
+      (data['moodScore'] as num?)?.toInt() ??
+      (data['studentMoodScore'] as num?)?.toInt();
   String get studentAlias =>
       data['studentAlias'] as String? ??
       data['anonymousId'] as String? ??

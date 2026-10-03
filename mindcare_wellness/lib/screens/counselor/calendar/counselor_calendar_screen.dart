@@ -9,6 +9,7 @@ import '../../../widgets/common/loading.dart';
 import '../appointment_details_screen.dart';
 import '../counselor_helpers.dart';
 import '../counselor_theme.dart';
+import 'counselor_availability_screen.dart';
 
 class CounselorCalendarScreen extends StatefulWidget {
   const CounselorCalendarScreen({required this.service, super.key});
@@ -20,9 +21,10 @@ class CounselorCalendarScreen extends StatefulWidget {
 }
 
 class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
-  final availabilityService = AvailabilityService();
   late DateTime month;
   late DateTime selectedDay;
+  final availabilityService = AvailabilityService();
+  String selectedStatus = 'confirmed';
 
   @override
   void initState() {
@@ -58,86 +60,88 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
                     b.startAt ?? DateTime(2100),
                   ),
                 );
+          final visibleAppointments = selected.where((item) {
+            if (selectedStatus == 'confirmed') {
+              return item.status == 'confirmed' ||
+                  item.status == 'rescheduled' ||
+                  item.status == 'completed' ||
+                  item.status == 'no_show';
+            }
+            return item.status == selectedStatus;
+          }).toList();
           return StreamBuilder<List<CounselorAvailabilityModel>>(
             stream: availabilityService.forCounselor(availabilityService.uid),
-            builder: (context, availabilitySnapshot) => ListView(
-              padding: const EdgeInsets.fromLTRB(16, 13, 16, 28),
-              children: [
-                const _CalendarHeading(),
-                const SizedBox(height: 14),
-                _MonthCard(
-                  month: month,
-                  selectedDay: selectedDay,
-                  appointments: appointments,
-                  onPrevious: () => _changeMonth(-1),
-                  onNext: () => _changeMonth(1),
-                  onDaySelected: (day) => setState(() => selectedDay = day),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  _dateLabel(selectedDay),
-                  style: const TextStyle(
-                    color: dashboardInk,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+            builder: (context, availabilitySnapshot) {
+              final availability = availabilitySnapshot.data ?? const [];
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 13, 16, 28),
+            children: [
+              _CalendarHeading(
+                onAvailability: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => Scaffold(
+                      backgroundColor: dashboardMint,
+                      body: const CounselorAvailabilityScreen(),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 9),
-                if (selected.isEmpty)
-                  const _CalendarEmpty(message: 'No appointments on this day.')
-                else
-                  ...selected.map(
-                    (item) => _CalendarAppointment(
-                      item: item,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => AppointmentDetailsScreen(
-                            item: item,
-                            service: widget.service,
+              ),
+              const SizedBox(height: 14),
+              _MonthCard(
+                month: month,
+                selectedDay: selectedDay,
+                appointments: appointments,
+                availability: availability,
+                onPrevious: () => _changeMonth(-1),
+                onNext: () => _changeMonth(1),
+                onDaySelected: (day) => setState(() => selectedDay = day),
+              ),
+              const SizedBox(height: 10),
+              const _CalendarLegend(),
+              const SizedBox(height: 18),
+              Text(
+                _dateLabel(selectedDay),
+                style: const TextStyle(
+                  color: dashboardInk,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 9),
+              _AppointmentStatusTabs(
+                selectedStatus: selectedStatus,
+                appointments: selected,
+                onChanged: (status) => setState(() => selectedStatus = status),
+              ),
+              const SizedBox(height: 8),
+              if (visibleAppointments.isEmpty)
+                const _CalendarEmpty(message: 'No appointments on this day.')
+              else
+                ...[
+                  _AppointmentSectionHeader(
+                    label: _statusLabel(selectedStatus),
+                    count: visibleAppointments.length,
+                    color: _statusColor(selectedStatus),
+                  ),
+                  ...visibleAppointments.map(
+                      (item) => _CalendarAppointment(
+                        item: item,
+                        onView: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AppointmentDetailsScreen(
+                              item: item,
+                              service: widget.service,
+                            ),
                           ),
                         ),
                       ),
-                    ),
                   ),
-                const SizedBox(height: 17),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Working hours',
-                        style: TextStyle(
-                          color: dashboardInk,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Add availability',
-                      onPressed: () => _addAvailability(context),
-                      icon: const Icon(
-                        Icons.add_circle_outline,
-                        color: dashboardGreen,
-                      ),
-                    ),
-                  ],
-                ),
-                if (availabilitySnapshot.hasError)
-                  const _CalendarEmpty(
-                    message: 'Availability is unavailable right now.',
-                  )
-                else if ((availabilitySnapshot.data ?? []).isEmpty)
-                  const _CalendarEmpty(message: 'No working hours configured.')
-                else
-                  ...availabilitySnapshot.data!.map(
-                    (item) => _AvailabilityRow(
-                      item: item,
-                      onDelete: () => availabilityService.delete(item.id),
-                    ),
-                  ),
-              ],
-            ),
+                ],
+            ],
+          );
+            },
           );
         },
       ),
@@ -149,17 +153,132 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
     selectedDay = DateTime(month.year, month.month, 1);
   });
 
-  Future<void> _addAvailability(BuildContext context) async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => _AddAvailabilityDialog(
-        dayOfWeek: weekdayName(selectedDay.weekday),
-        service: availabilityService,
-      ),
-    );
-    if (result == true && mounted) setState(() {});
-  }
 }
+
+class _AppointmentStatusTabs extends StatelessWidget {
+  const _AppointmentStatusTabs({
+    required this.selectedStatus,
+    required this.appointments,
+    required this.onChanged,
+  });
+  final String selectedStatus;
+  final List<CounselorAppointment> appointments;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEAF9EF),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      children: [
+        _StatusTab(
+          label: 'Confirmed',
+          count: appointments
+              .where(
+                (item) =>
+                    item.status == 'confirmed' ||
+                    item.status == 'rescheduled' ||
+                    item.status == 'completed' ||
+                    item.status == 'no_show',
+              )
+              .length,
+          color: dashboardGreen,
+          selected: selectedStatus == 'confirmed',
+          onTap: () => onChanged('confirmed'),
+        ),
+        _StatusTab(
+          label: 'Pending',
+          count: appointments
+              .where((item) => item.status == 'pending')
+              .length,
+          color: Colors.orange.shade700,
+          selected: selectedStatus == 'pending',
+          onTap: () => onChanged('pending'),
+        ),
+        _StatusTab(
+          label: 'Rejected',
+          count: appointments
+              .where((item) => item.status == 'rejected')
+              .length,
+          color: const Color(0xFFC62828),
+          selected: selectedStatus == 'rejected',
+          onTap: () => onChanged('rejected'),
+        ),
+      ],
+    ),
+  );
+}
+
+class _StatusTab extends StatelessWidget {
+  const _StatusTab({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+  final String label;
+  final int count;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(9),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 4),
+        decoration: BoxDecoration(
+          color: selected ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          boxShadow: selected
+              ? const [BoxShadow(color: Color(0x12000000), blurRadius: 4)]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? color : Colors.black54,
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '$count',
+              style: TextStyle(
+                color: selected ? color : Colors.black45,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+String _statusLabel(String value) => switch (value) {
+  'confirmed' => 'Confirmed',
+  'pending' => 'Pending',
+  'rejected' => 'Rejected',
+  _ => 'Appointments',
+};
+
+Color _statusColor(String value) => switch (value) {
+  'pending' => Colors.orange.shade700,
+  'rejected' => const Color(0xFFC62828),
+  _ => dashboardGreen,
+};
 
 class _AddAvailabilityDialog extends StatefulWidget {
   const _AddAvailabilityDialog({
@@ -340,11 +459,37 @@ class _AvailabilityField extends StatelessWidget {
 
 bool _sameDay(DateTime? a, DateTime b) =>
     a != null && a.year == b.year && a.month == b.month && a.day == b.day;
+
+bool _sameWeekday(String value, DateTime date) =>
+  value.trim().toLowerCase() == weekdayName(date.weekday).toLowerCase();
+
+String _timeRange(CounselorAppointment item) {
+  final start = item.startAt;
+  final end = item.endAt;
+  if (start == null) return 'Time not set';
+  String format(DateTime value) {
+    final hour = value.hour == 0 ? 12 : value.hour > 12 ? value.hour - 12 : value.hour;
+    final period = value.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:${value.minute.toString().padLeft(2, '0')} $period';
+  }
+  return end == null ? format(start) : '${format(start)} - ${format(end)}';
+}
+
+String _sessionTypeLabel(String value) => switch (value) {
+  'in_person' => 'In-Person',
+  'video' => 'Video',
+  'audio' => 'Audio',
+  'chat' => 'Chat',
+  _ => value,
+};
+
 String _dateLabel(DateTime date) =>
     '${weekdayName(date.weekday).substring(0, 1)}${weekdayName(date.weekday).substring(1).toLowerCase()}, ${date.day} ${monthName(date.month).substring(0, 1)}${monthName(date.month).substring(1).toLowerCase()}';
 
 class _CalendarHeading extends StatelessWidget {
-  const _CalendarHeading();
+  const _CalendarHeading({required this.onAvailability});
+  final VoidCallback onAvailability;
+
   @override
   Widget build(BuildContext context) => Row(
     children: [
@@ -383,7 +528,7 @@ class _CalendarHeading extends StatelessWidget {
               ),
             ),
             Text(
-              'Calender',
+              'Calendar',
               style: TextStyle(
                 color: dashboardInk,
                 fontSize: 22,
@@ -393,33 +538,58 @@ class _CalendarHeading extends StatelessWidget {
           ],
         ),
       ),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFFD8F8E0),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.circle, color: dashboardGreen, size: 7),
-            SizedBox(width: 5),
-            Text(
-              'Synced just now',
-              style: TextStyle(
-                color: dashboardGreen,
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
+      IconButton(
+        onPressed: onAvailability,
+        tooltip: 'Manage working hours',
+        icon: const Icon(Icons.schedule_outlined, color: dashboardGreen),
       ),
-      const SizedBox(width: 10),
-      const CircleAvatar(
-        radius: 20,
-        backgroundColor: Color(0xFFDDF8E6),
-        child: Icon(Icons.person, color: dashboardGreen, size: 22),
+    ],
+  );
+}
+
+class _CalendarLegend extends StatelessWidget {
+  const _CalendarLegend();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: const Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        _LegendItem(color: dashboardGreen, label: 'Consults'),
+        _LegendItem(color: Colors.orange, label: 'Reschedule'),
+        _LegendItem(color: Color(0xFF25B6D2), label: 'Open slot'),
+      ],
+    ),
+  );
+}
+
+class _LegendItem extends StatelessWidget {
+  const _LegendItem({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 5),
+      Text(
+        label,
+        style: const TextStyle(
+          color: dashboardInk,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     ],
   );
@@ -430,6 +600,7 @@ class _MonthCard extends StatelessWidget {
     required this.month,
     required this.selectedDay,
     required this.appointments,
+    required this.availability,
     required this.onPrevious,
     required this.onNext,
     required this.onDaySelected,
@@ -437,6 +608,7 @@ class _MonthCard extends StatelessWidget {
   final DateTime month;
   final DateTime selectedDay;
   final List<CounselorAppointment> appointments;
+  final List<CounselorAvailabilityModel> availability;
   final VoidCallback onPrevious;
   final VoidCallback onNext;
   final ValueChanged<DateTime> onDaySelected;
@@ -500,9 +672,21 @@ class _MonthCard extends StatelessWidget {
               if (day < 1 || day > days) return const SizedBox();
               final date = DateTime(month.year, month.month, day);
               final selected = _sameDay(date, selectedDay);
-              final hasAppointment = appointments.any(
+              final markers = <Color>{};
+              for (final item in appointments.where(
                 (item) => _sameDay(item.startAt, date),
-              );
+              )) {
+                markers.add(
+                  item.status == 'rejected'
+                      ? const Color(0xFFC62828)
+                      : item.status == 'pending' || item.status == 'rescheduled'
+                      ? Colors.orange
+                      : dashboardGreen,
+                );
+              }
+              if (availability.any((item) => _sameWeekday(item.dayOfWeek, date))) {
+                markers.add(const Color(0xFF25B6D2));
+              }
               return InkWell(
                 onTap: () => onDaySelected(date),
                 child: Column(
@@ -527,14 +711,24 @@ class _MonthCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    if (hasAppointment)
-                      Container(
-                        width: 5,
-                        height: 5,
-                        decoration: const BoxDecoration(
-                          color: Colors.orange,
-                          shape: BoxShape.circle,
-                        ),
+                    if (markers.isNotEmpty)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: markers
+                            .map(
+                              (color) => Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 1),
+                                child: Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
                       ),
                   ],
                 ),
@@ -547,104 +741,228 @@ class _MonthCard extends StatelessWidget {
   }
 }
 
+class _AppointmentSectionHeader extends StatelessWidget {
+  const _AppointmentSectionHeader({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
+  final String label;
+  final int count;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 10, bottom: 7),
+    child: Row(
+      children: [
+        Container(
+          width: 9,
+          height: 9,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 7),
+        Text(
+          label,
+          style: const TextStyle(
+            color: dashboardInk,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '$count ${count == 1 ? 'appointment' : 'appointments'}',
+          style: const TextStyle(color: Colors.black54, fontSize: 11),
+        ),
+      ],
+    ),
+  );
+}
+
 class _CalendarAppointment extends StatelessWidget {
-  const _CalendarAppointment({required this.item, required this.onTap});
+  const _CalendarAppointment({required this.item, required this.onView});
   final CounselorAppointment item;
-  final VoidCallback onTap;
+  final VoidCallback onView;
   @override
   Widget build(BuildContext context) {
-    final statusColor = item.status == 'pending'
-        ? Colors.orange.shade800
-        : dashboardGreen;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 9),
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border(left: BorderSide(color: statusColor, width: 4)),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 75,
-              child: Text(
-                appointmentTime(item.startAt),
+    final statusColor = switch (item.status) {
+      'rescheduled' => Colors.orange.shade800,
+      'pending' => Colors.orange.shade800,
+      _ => dashboardGreen,
+    };
+    final location = item.location?.trim();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.fromLTRB(14, 13, 10, 11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border(left: BorderSide(color: statusColor, width: 4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                _timeRange(item),
                 style: const TextStyle(
-                  color: dashboardGreen,
+                  color: dashboardInk,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                 ),
               ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.reason,
-                    style: const TextStyle(
-                      color: dashboardInk,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    item.studentAlias,
-                    style: const TextStyle(color: Colors.black54, fontSize: 11),
-                  ),
-                ],
+              const SizedBox(width: 9),
+              _AppointmentChip(
+                label: _sessionTypeLabel(item.sessionType),
+                color: dashboardGreen,
               ),
-            ),
-            Text(
-              appointmentStatusLabel(item.status),
-              style: TextStyle(
+              const Spacer(),
+              _AppointmentChip(
+                label: appointmentStatusLabel(item.status),
                 color: statusColor,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
               ),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            item.studentAlias,
+            style: const TextStyle(
+              color: dashboardInk,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Topic: ${item.reason}',
+            style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+          ),
+          const SizedBox(height: 7),
+          _MoodLabel(item: item),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 10),
+            child: Divider(height: 1, color: Color(0xFFE7EFEA)),
+          ),
+          Row(
+            children: [
+              Expanded(
+                child: _LocationLabel(location: location),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: onView,
+                icon: const Icon(Icons.arrow_forward, size: 16),
+                label: const Text('View'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF009B16),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 10,
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _AvailabilityRow extends StatelessWidget {
-  const _AvailabilityRow({required this.item, required this.onDelete});
-  final CounselorAvailabilityModel item;
-  final VoidCallback onDelete;
+class _AppointmentChip extends StatelessWidget {
+  const _AppointmentChip({required this.label, required this.color});
+  final String label;
+  final Color color;
+
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
+      color: color.withValues(alpha: 0.14),
+      borderRadius: BorderRadius.circular(9),
     ),
-    child: Row(
+    child: Text(
+      label,
+      style: TextStyle(
+        color: color,
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+      ),
+    ),
+  );
+}
+
+class _MoodLabel extends StatelessWidget {
+  const _MoodLabel({required this.item});
+  final CounselorAppointment item;
+
+  @override
+  Widget build(BuildContext context) {
+    final mood = item.mood?.trim();
+    final score = item.moodScore;
+    final text = mood == null || mood.isEmpty
+        ? 'Mood not recorded'
+        : 'Mood: $mood${score == null ? '' : '  •  Score $score/10'}';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.schedule_outlined, color: dashboardGreen),
-        const SizedBox(width: 10),
-        Expanded(
+        Icon(
+          Icons.mood_outlined,
+          size: 15,
+          color: mood == null || mood.isEmpty ? Colors.black45 : dashboardGreen,
+        ),
+        const SizedBox(width: 4),
+        Flexible(
           child: Text(
-            '${item.dayOfWeek}  ${item.startTime} - ${item.endTime}',
+            text,
             style: const TextStyle(
-              fontWeight: FontWeight.w700,
-              color: dashboardInk,
+              color: Colors.black54,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        Text(
-          '${item.sessionDuration} min',
-          style: const TextStyle(color: Colors.black54, fontSize: 11),
-        ),
-        IconButton(
-          tooltip: 'Delete working hours',
-          onPressed: onDelete,
-          icon: const Icon(Icons.delete_outline, size: 19),
+      ],
+    );
+  }
+}
+
+class _LocationLabel extends StatelessWidget {
+  const _LocationLabel({required this.location});
+  final String? location;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+    decoration: BoxDecoration(
+      color: const Color(0xFFDDF8E6),
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.location_on_outlined, color: dashboardGreen, size: 15),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            location?.isNotEmpty == true ? location! : 'Location not set',
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: dashboardGreen,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
       ],
     ),

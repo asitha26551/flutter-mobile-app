@@ -26,17 +26,41 @@ service cloud.firestore {
     }
 
     match /students/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId
+        || isAdmin()
+        || (
+          isApprovedCounselor()
+          && resource.data.authorizedCounselorIds is list
+          && request.auth.uid in resource.data.authorizedCounselorIds
+        )
+      );
       allow create: if isSignedIn()
         && request.auth.uid == userId
         && getAfter(/databases/$(database)/documents/users/$(userId)).data.role == 'student'
-        && request.resource.data.uid == userId;
+        && request.resource.data.uid == userId
+        && request.resource.data.priorityLevel == 'normal';
       allow update: if isAdmin()
         || (isSignedIn()
           && request.auth.uid == userId
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.createdAt == resource.data.createdAt
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['studentId', 'faculty', 'department', 'degreeProgram', 'academicYear', 'intake', 'phoneNumber', 'whatsappNumber', 'alternativePhone', 'profileImageUrl', 'updatedAt']));
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'studentId', 'alias', 'faculty', 'department', 'degreeProgram',
+            'academicYear', 'batch', 'intake', 'phoneNumber', 'whatsappNumber',
+            'alternativePhone', 'profileImageUrl', 'authorizedCounselorIds', 'updatedAt'
+          ]))
+        || (
+          isApprovedCounselor()
+          && resource.data.authorizedCounselorIds is list
+          && request.auth.uid in resource.data.authorizedCounselorIds
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'priorityLevel', 'updatedAt'
+          ])
+          && request.resource.data.priorityLevel in ['normal', 'high']
+        );
       allow delete: if isAdmin();
     }
 
@@ -240,12 +264,20 @@ service cloud.firestore {
 
     function counselorAppointmentUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        'status', 'meetingLink', 'location', 'cancellationReason', 'cancelledBy', 'updatedAt'
+        'status', 'meetingLink', 'location', 'cancellationReason', 'cancelledBy',
+        'startAt', 'endAt', 'updatedAt'
       ])
         && (
           (resource.data.status == 'pending' && request.resource.data.status in ['confirmed', 'rejected'])
           || (resource.data.status == 'confirmed' && request.resource.data.status in ['cancelled', 'completed', 'no_show'])
           || (resource.data.status == 'rescheduled' && request.resource.data.status == 'confirmed')
+          || (
+            resource.data.status in ['confirmed', 'rescheduled']
+            && request.resource.data.status == 'rescheduled'
+            && request.resource.data.startAt is timestamp
+            && request.resource.data.endAt is timestamp
+            && request.resource.data.endAt > request.resource.data.startAt
+          )
         );
     }
 

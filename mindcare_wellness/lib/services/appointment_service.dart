@@ -37,7 +37,8 @@ class AppointmentService {
     String? studentNotes,
   }) async {
     final reference = _firestore.collection('appointments').doc();
-    await reference.set({
+    final batch = _firestore.batch();
+    batch.set(reference, {
       'studentId': uid,
       'counselorId': counselorId,
       'startAt': Timestamp.fromDate(startAt),
@@ -53,6 +54,11 @@ class AppointmentService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    batch.update(_firestore.collection('students').doc(uid), {
+      'authorizedCounselorIds': FieldValue.arrayUnion([counselorId]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await batch.commit();
     return reference.id;
   }
 
@@ -81,10 +87,17 @@ class AppointmentService {
     String id, {
     required DateTime startAt,
     required DateTime endAt,
-  }) => _firestore.collection('appointments').doc(id).update({
-    'status': 'rescheduled',
-    'startAt': Timestamp.fromDate(startAt),
-    'endAt': Timestamp.fromDate(endAt),
-    'updatedAt': FieldValue.serverTimestamp(),
-  });
+  }) {
+    if (!endAt.isAfter(startAt)) {
+      throw ArgumentError(
+        'The appointment end time must be after its start time.',
+      );
+    }
+    return _firestore.collection('appointments').doc(id).update({
+      'status': 'rescheduled',
+      'startAt': Timestamp.fromDate(startAt),
+      'endAt': Timestamp.fromDate(endAt),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }
