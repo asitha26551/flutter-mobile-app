@@ -49,6 +49,15 @@ class SessionNoteService {
           .where((note) => note.appointmentId == appointmentId)
           .toList());
 
+  Stream<List<SessionNoteModel>> forStudent(String studentId) => _firestore
+      .collection('session_notes')
+      .where('counselorId', isEqualTo: uid)
+      .snapshots()
+      .map((snapshot) => snapshot.docs
+          .map(SessionNoteModel.fromFirestore)
+          .where((note) => note.studentId == studentId)
+          .toList());
+
   Future<List<SessionNoteEntry>> loadEntries(List<SessionNoteModel> notes) async {
     final entries = await Future.wait(notes.map((note) async {
       final appointment = await _firestore
