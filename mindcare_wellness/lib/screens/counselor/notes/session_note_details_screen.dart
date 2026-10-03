@@ -71,6 +71,7 @@ class SessionNoteDetailsScreen extends StatelessWidget {
           // ── Latest Clinical Session section ──
           _SectionHeader(
             label: 'LATEST CLINICAL SESSION',
+            icon: Icons.note_alt_outlined,
             badge: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -102,6 +103,7 @@ class SessionNoteDetailsScreen extends StatelessWidget {
           // ── Consultation History section ──
           _SectionHeader(
             label: 'CONSULTATION HISTORY',
+            icon: Icons.history,
             badge: Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
@@ -332,8 +334,13 @@ class _MetricBox extends StatelessWidget {
 // Section Header with badge
 // ──────────────────────────────────────────
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label, required this.badge});
+  const _SectionHeader({
+    required this.label,
+    required this.icon,
+    required this.badge,
+  });
   final String label;
+  final IconData icon;
   final Widget badge;
 
   @override
@@ -345,7 +352,7 @@ class _SectionHeader extends StatelessWidget {
     ),
     child: Row(
       children: [
-        const Icon(Icons.note_alt_outlined, color: dashboardGreen, size: 15),
+        Icon(icon, color: dashboardGreen, size: 15),
         const SizedBox(width: 7),
         Expanded(
           child: Text(
@@ -477,36 +484,46 @@ class _HistorySessionCard extends StatelessWidget {
     final noteText = entry.note.note.trim();
 
     return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: isFirst
-            ? Border.all(color: const Color(0xFFB8E8C3), width: 1.5)
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      padding: const EdgeInsets.only(left: 4),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              width: 28,
+              child: Column(
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: isFirst ? dashboardGreen : Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: dashboardGreen, width: 1.5),
+                    ),
+                    child: Icon(
+                      isFirst ? Icons.check : Icons.history,
+                      color: isFirst ? Colors.white : dashboardGreen,
+                      size: 12,
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: const Color(0xFFC8EDD1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
           // Title + date
           Row(
             children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: isFirst
-                      ? dashboardGreen
-                      : const Color(0xFFE0F4E5),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  isFirst ? Icons.check : Icons.history,
-                  color: isFirst ? Colors.white : dashboardGreen,
-                  size: 13,
-                ),
-              ),
-              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   title,
@@ -529,11 +546,12 @@ class _HistorySessionCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 32),
             child: Text(
-              '${_sessionType(appointment?.sessionType)}  •  ${_timeRange(appointment)}',
+              '${_durationLabel(appointment)}  •  ${_sessionType(appointment?.sessionType)}'
+              '${appointment?.location?.trim().isNotEmpty == true ? '  •  ${appointment!.location}' : ''}',
               style: const TextStyle(color: Colors.black54, fontSize: 10),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           // Full note content
           Container(
             width: double.infinity,
@@ -551,7 +569,12 @@ class _HistorySessionCard extends StatelessWidget {
               ),
             ),
           ),
-        ],
+          const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -570,14 +593,14 @@ String _fullDate(DateTime? value) => value == null
     ? 'Date not available'
     : '${_monthsShort[value.month - 1]} ${value.day}, ${value.year}';
 
-String _timeRange(AppointmentModel? appointment) {
-  if (appointment == null) return 'Not available';
-  final start = appointment.startAt;
-  final end = appointment.endAt;
-  if (start == null) return 'Time not available';
-  String format(DateTime v) =>
-      '${v.hour.toString().padLeft(2, '0')}:${v.minute.toString().padLeft(2, '0')}';
-  return end == null ? format(start) : '${format(start)} – ${format(end)}';
+String _durationLabel(AppointmentModel? appointment) {
+  final start = appointment?.startAt;
+  final end = appointment?.endAt;
+  if (start == null || end == null || !end.isAfter(start)) {
+    return 'Duration not available';
+  }
+  final minutes = end.difference(start).inMinutes;
+  return '$minutes min${minutes == 1 ? '' : 's'}';
 }
 
 String _sessionType(String? value) => switch (value) {
