@@ -1,56 +1,224 @@
-# Flutter + Firebase Project Environment Setup
+# MindCare Wellness
 
-This guide explains how to set up a **Flutter + Firebase development environment** for a Flutter mobile application.
+A Flutter + Firebase mobile application for university counseling and student wellness management.
 
-The setup includes:
+This document explains how collaborators can install the required software, clone the project, configure Firebase, run the application, and follow the project's security rules.
 
-* Flutter SDK
+---
+
+# 1. Technology Stack
+
+MindCare Wellness uses:
+
+* Flutter
 * Dart
-* Visual Studio Code
-* Android Studio
-* Android SDK
-* Android Emulator
-* Firebase CLI
-* FlutterFire CLI
 * Firebase Authentication
 * Cloud Firestore
-* Firebase Storage
+* Firebase Storage (if enabled by the project)
+* Firebase Cloud Messaging (if enabled)
+* Android
+* Git
+* GitHub
+
+The application does **not** use a separate traditional backend such as Spring Boot.
+
+Firebase provides the backend services used by the Flutter application.
 
 ---
 
-## 1. Prerequisites
+# 2. Required Software
 
-Before creating the project, install the following:
+Every collaborator should install the following:
 
-| Software           | Purpose                                     |
-| ------------------ | ------------------------------------------- |
-| Flutter SDK        | Flutter application development             |
-| Dart SDK           | Programming language used by Flutter        |
-| Visual Studio Code | Code editor                                 |
-| Android Studio     | Android SDK and emulator                    |
-| Node.js            | Required for Firebase CLI                   |
-| Firebase CLI       | Firebase project management                 |
-| FlutterFire CLI    | Connects Flutter applications with Firebase |
+| Software         | Required              | Purpose                                             |
+| ---------------- | --------------------- | --------------------------------------------------- |
+| Git              | Yes                   | Clone and manage the repository                     |
+| Flutter SDK      | Yes                   | Develop and run the Flutter application             |
+| Dart SDK         | Included with Flutter | Dart programming                                    |
+| Android Studio   | Recommended           | Android SDK, emulator and Android development tools |
+| VS Code          | Recommended           | Flutter/Dart development                            |
+| Android SDK      | Yes                   | Build and run Android applications                  |
+| Android Emulator | Recommended           | Test the application                                |
+| Firebase CLI     | Recommended           | Firebase project management                         |
+| FlutterFire CLI  | Recommended           | Configure Flutter with Firebase                     |
 
 ---
 
-# 2. Install Flutter
+# 3. Recommended Installation Setup
 
-Download and install the Flutter SDK from the official Flutter website.
+The recommended development environment is:
+
+```text
+Windows
+   │
+   ├── Git
+   │
+   ├── Flutter SDK
+   │
+   ├── Android Studio
+   │      ├── Android SDK
+   │      ├── Android SDK Platform Tools
+   │      ├── Android Emulator
+   │      └── Android SDK Command-line Tools
+   │
+   ├── VS Code
+   │      ├── Flutter Extension
+   │      └── Dart Extension
+   │
+   └── Firebase CLI
+```
+
+Android Studio and VS Code have different purposes.
+
+### Android Studio
+
+Mainly used for:
+
+* Android SDK
+* Android SDK Manager
+* Android Emulator
+* Android build tools
+* Android debugging tools
+
+### VS Code
+
+Mainly used for:
+
+* Writing Flutter/Dart code
+* Managing the project
+* Debugging
+* Git integration
+* Flutter development
+
+You can develop mainly in VS Code while using Android Studio for the Android SDK and emulator.
+
+---
+
+# 4. Option A — Install Android Studio
+
+Download Android Studio from the official Android developer website.
+
+During installation, make sure the following components are installed:
+
+* Android SDK
+* Android SDK Platform
+* Android SDK Platform-Tools
+* Android Emulator
+* Android SDK Build-Tools
+
+After installation:
+
+1. Open Android Studio.
+2. Open:
+
+```text
+More Actions → SDK Manager
+```
+
+3. Check that an Android SDK is installed.
+
+Then open:
+
+```text
+More Actions → Virtual Device Manager
+```
+
+Create an Android Virtual Device.
+
+Recommended:
+
+```text
+Device: Pixel
+System Image: Recent stable Android image
+Architecture: x86_64
+```
+
+Start the emulator.
+
+---
+
+# 5. Option B — Install VS Code
+
+Download Visual Studio Code.
+
+After installation, open VS Code.
+
+Install these extensions:
+
+### Required
+
+```text
+Flutter
+Dart
+```
+
+The Flutter extension normally installs/supports the Dart extension as well.
+
+### Useful
+
+```text
+GitLens
+Error Lens
+Firebase
+```
+
+The additional extensions are optional.
+
+---
+
+# 6. Install Git
+
+Install Git for Windows.
+
+After installation, open PowerShell and check:
+
+```powershell
+git --version
+```
+
+You should receive a version such as:
+
+```text
+git version 2.x.x
+```
+
+If the command is not recognized, restart the terminal or verify that Git was added to PATH.
+
+---
+
+# 7. Install Flutter
+
+Download and install the Flutter SDK.
 
 Example installation location:
+
+```text
+C:\src\flutter
+```
+
+or:
 
 ```text
 D:\flutter
 ```
 
-Add the following directory to the Windows `PATH`:
+Avoid installing Flutter inside:
+
+```text
+C:\Program Files\
+```
+
+because permissions can sometimes cause problems.
+
+Add the Flutter `bin` directory to the Windows PATH.
+
+For example:
 
 ```text
 D:\flutter\bin
 ```
 
-Verify the installation:
+Open a new PowerShell window and run:
 
 ```powershell
 flutter --version
@@ -62,50 +230,19 @@ Then run:
 flutter doctor
 ```
 
-`flutter doctor` checks whether the required Flutter development components are installed correctly.
-
 ---
 
-# 3. Install Visual Studio Code
+# 8. Configure Android
 
-Install Visual Studio Code.
-
-Install the following extensions:
-
-* Flutter
-* Dart
-
-After installing the extensions, restart Visual Studio Code if necessary.
-
-Verify Flutter again:
+Run:
 
 ```powershell
 flutter doctor
 ```
 
----
+Look for the Android toolchain.
 
-# 4. Install Android Studio
-
-Android Studio is required for Android development because it provides:
-
-* Android SDK
-* Android SDK Platform
-* Android SDK Build-Tools
-* Android SDK Command-line Tools
-* Android Emulator
-* Android SDK Platform-Tools
-
-Open:
-
-```text
-Android Studio
-    → SDK Manager
-```
-
-Make sure the required Android SDK components are installed.
-
-Then accept the Android licenses:
+If Flutter reports that Android licenses have not been accepted, run:
 
 ```powershell
 flutter doctor --android-licenses
@@ -113,286 +250,160 @@ flutter doctor --android-licenses
 
 Accept the required licenses.
 
-Finally:
+Then run:
 
 ```powershell
 flutter doctor
 ```
 
-Resolve any remaining Android-related issues before continuing.
+again.
+
+The goal is to have the required Flutter, Android and development components detected correctly.
 
 ---
 
-# 5. Create an Android Emulator
+# 9. Clone the MindCare Repository
 
-Open Android Studio:
+Open PowerShell.
 
-```text
-Android Studio
-    → Device Manager
-    → Create Virtual Device
-```
-
-For example:
-
-```text
-Device: Pixel
-System Image: Google APIs
-Architecture: x86_64
-```
-
-Start the emulator.
-
-Check whether Flutter detects it:
-
-```powershell
-flutter devices
-```
-
-You should see an Android device similar to:
-
-```text
-sdk gphone16k x86 64
-```
-
----
-
-# 6. Test Flutter
-
-Before connecting Firebase, verify that Flutter can create and run an application.
-
-Create a temporary project:
-
-```powershell
-flutter create test_app
-```
-
-Enter the project:
-
-```powershell
-cd test_app
-```
-
-Run the application:
-
-```powershell
-flutter run
-```
-
-If the default Flutter application opens successfully on the Android emulator, the Flutter and Android environment is working correctly.
-
----
-
-# 7. Install Node.js
-
-Firebase CLI requires Node.js.
-
-Verify the installation:
-
-```powershell
-node --version
-```
-
-and:
-
-```powershell
-npm --version
-```
-
-If these commands do not work, install Node.js before continuing.
-
----
-
-# 8. Install Firebase CLI
-
-Install Firebase CLI globally:
-
-```powershell
-npm install -g firebase-tools
-```
-
-Verify:
-
-```powershell
-firebase --version
-```
-
-Log in to Firebase:
-
-```powershell
-firebase login
-```
-
-A browser window will open. Sign in using the Google account associated with your Firebase projects.
-
-Check your Firebase projects:
-
-```powershell
-firebase projects:list
-```
-
----
-
-# 9. Install FlutterFire CLI
-
-FlutterFire CLI is used to connect a Flutter project to a Firebase project.
-
-Install it using:
-
-```powershell
-dart pub global activate flutterfire_cli
-```
-
-Verify:
-
-```powershell
-flutterfire --version
-```
-
-If Windows cannot find the `flutterfire` command, make sure the Dart Pub Cache `bin` directory is included in your Windows `PATH`.
-
-Usually:
-
-```text
-%LOCALAPPDATA%\Pub\Cache\bin
-```
-
-Restart VS Code or PowerShell after changing the PATH.
-
----
-
-# 10. Create a Firebase Project
-
-Open the Firebase Console:
-
-https://console.firebase.google.com/
-
-Select:
-
-```text
-Create a project
-```
+Navigate to the folder where you keep your projects.
 
 Example:
 
-```text
-Project name:
-MindCare Wellness
+```powershell
+cd "C:\Users\<YOUR_USERNAME>\Documents\GitHub"
 ```
 
-Firebase will generate a unique project ID.
-
-Example:
-
-```text
-mindcare-wellness-xxxxx
-```
-
-Keep this Firebase project associated with your Flutter application.
-
----
-
-# 11. Create the Flutter Project
-
-Navigate to the directory where you keep your projects:
+Clone the repository:
 
 ```powershell
-cd C:\Users\YourName\Documents\GitHub
+git clone <GITHUB_REPOSITORY_URL>
 ```
 
-Create the Flutter project:
-
-```powershell
-flutter create mindcare
-```
-
-Enter the project:
+Then enter the project:
 
 ```powershell
 cd mindcare
 ```
 
-Open the project in Visual Studio Code:
-
-```powershell
-code .
-```
-
-The basic project structure will look like:
-
-```text
-mindcare/
-├── android/
-├── ios/
-├── lib/
-│   └── main.dart
-├── test/
-├── pubspec.yaml
-├── analysis_options.yaml
-└── .gitignore
-```
+If the repository uses a different name, use the actual repository name.
 
 ---
 
-# 12. Connect Flutter to Firebase
+# 10. Install Flutter Dependencies
 
-Make sure you are inside the Flutter project:
-
-```powershell
-cd C:\Users\YourName\Documents\GitHub\mindcare
-```
-
-Make sure you are logged into Firebase:
+Inside the project directory, run:
 
 ```powershell
-firebase login
+flutter pub get
 ```
 
-Run:
-
-```powershell
-flutterfire configure
-```
-
-FlutterFire will ask you to:
-
-1. Select your Firebase account.
-2. Select the Firebase project.
-3. Select the platforms.
-4. Configure the Firebase application.
-
-For an Android-only application, select:
+This downloads the packages defined in:
 
 ```text
-Android
+pubspec.yaml
 ```
 
-FlutterFire will generate:
+Do not manually download individual Dart packages unless specifically required.
+
+---
+
+# 11. Firebase Configuration
+
+MindCare uses Firebase.
+
+The project already contains:
 
 ```text
 lib/firebase_options.dart
 ```
 
-This file contains the Firebase configuration required by the Flutter application.
+This file contains the Firebase client configuration required by the Flutter application.
+
+### Important
+
+`firebase_options.dart` is normally committed to GitHub.
+
+Do NOT replace it with your own Firebase project configuration unless the project owner specifically instructs you to do so.
+
+The application should connect to the project's existing Firebase project.
 
 ---
 
-# 13. Add Firebase Core
+# 12. Firebase Project
 
-Add Firebase Core:
+The current MindCare Firebase project is:
 
-```powershell
-flutter pub add firebase_core
+```text
+Project name:
+counselor-booking
+
+Project ID:
+counselor-booking-a5e04
 ```
 
-Update `lib/main.dart`:
+Collaborators should **not create another Firebase project** unless specifically instructed.
+
+The team should work with the existing Firebase project.
+
+---
+
+# 13. Firebase CLI
+
+Install the Firebase CLI.
+
+After installation, check:
+
+```powershell
+firebase --version
+```
+
+Log in:
+
+```powershell
+firebase login
+```
+
+Then check the available projects:
+
+```powershell
+firebase projects:list
+```
+
+You should be able to see the MindCare Firebase project if your Google account has been granted the necessary Firebase permissions.
+
+---
+
+# 14. Firebase Access for Collaborators
+
+A collaborator needs access to the Firebase project if they need to:
+
+* View Firestore data
+* Modify Firestore rules
+* Manage Firebase Authentication
+* View Firebase logs
+* Configure Firebase services
+* Deploy Firebase configuration
+
+The project owner should add collaborators through the Firebase/Google Cloud project permissions.
+
+Do not share:
+
+```text
+serviceAccountKey.json
+```
+
+or other private credentials through GitHub, WhatsApp, email, or the project repository.
+
+---
+
+# 15. Firebase Initialization in Flutter
+
+The application initializes Firebase in `main.dart`.
+
+The structure should be similar to:
 
 ```dart
-import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-
-import 'firebase_options.dart';
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -400,208 +411,198 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Text('MindCare Wellness'),
-        ),
-      ),
-    );
-  }
+  runApp(const MindCareApp());
 }
 ```
 
-Run the application:
+Do not remove Firebase initialization.
+
+---
+
+# 16. Run the Application
+
+Start an Android emulator.
+
+Check that Flutter can detect it:
+
+```powershell
+flutter devices
+```
+
+You should see an Android device.
+
+For example:
+
+```text
+sdk gphone16k x86 64
+```
+
+Then run:
 
 ```powershell
 flutter run
 ```
 
-If the application starts without a Firebase initialization error, Flutter is successfully connected to Firebase.
+Alternatively, in VS Code:
+
+1. Open the MindCare project.
+2. Select the Android emulator/device.
+3. Press `F5`.
 
 ---
 
-# 14. Enable Firebase Authentication
+# 17. If No Android Device Is Found
 
-Open:
-
-```text
-Firebase Console
-    → Build
-    → Authentication
-    → Get started
-```
-
-Enable:
-
-```text
-Email/Password
-```
-
-Add Firebase Authentication to Flutter:
+Run:
 
 ```powershell
-flutter pub add firebase_auth
+flutter devices
 ```
 
-Import it when required:
+If no Android device appears:
 
-```dart
-import 'package:firebase_auth/firebase_auth.dart';
+1. Open Android Studio.
+2. Open Device Manager.
+3. Start an emulator.
+4. Wait until Android finishes booting.
+5. Run:
+
+```powershell
+flutter devices
 ```
 
-Firebase Authentication will handle:
+again.
 
-* User registration
-* Login
-* Logout
-* Password management
-* Email verification
-* Firebase UID
+Then:
 
-Passwords should **not** be stored in Firestore.
+```powershell
+flutter run
+```
 
 ---
 
-# 15. Enable Cloud Firestore
+# 18. Check the Project Before Development
 
-Open:
-
-```text
-Firebase Console
-    → Build
-    → Firestore Database
-    → Create database
-```
-
-Add Firestore to Flutter:
+After cloning the repository, run:
 
 ```powershell
-flutter pub add cloud_firestore
+flutter doctor
 ```
 
-Import:
+Then:
 
-```dart
-import 'package:cloud_firestore/cloud_firestore.dart';
+```powershell
+flutter pub get
 ```
 
-Firestore can then be used for application data such as:
+Then:
+
+```powershell
+flutter devices
+```
+
+Finally:
+
+```powershell
+flutter run
+```
+
+The basic setup sequence is:
+
+```text
+Install software
+      ↓
+Clone repository
+      ↓
+cd mindcare
+      ↓
+flutter pub get
+      ↓
+Start Android emulator
+      ↓
+flutter devices
+      ↓
+flutter run
+      ↓
+Test Firebase connection
+```
+
+---
+
+# 19. Project Structure
+
+The project generally follows this structure:
+
+```text
+mindcare/
+│
+├── android/
+│
+├── lib/
+│   ├── main.dart
+│   ├── firebase_options.dart
+│   │
+│   ├── models/
+│   │
+│   ├── services/
+│   │
+│   ├── screens/
+│   │
+│   └── widgets/
+│
+├── test/
+│
+├── pubspec.yaml
+├── pubspec.lock
+├── firebase.json
+├── firestore.rules
+├── firestore.indexes.json
+└── .gitignore
+```
+
+Do not create a separate traditional backend directory inside the Flutter application unless the team specifically decides to introduce another backend service.
+
+Firebase acts as the backend infrastructure.
+
+---
+
+# 20. Firestore Collections
+
+The current Firestore structure contains:
 
 ```text
 users
 students
 counselors
+counselor_availability
 appointments
+conversations
 messages
 notifications
+mood_entries
+journal_entries
+session_notes
+admin_actions
 ```
+
+Important:
+
+Do not create unrelated collections without discussing them with the team.
+
+In particular, the current design does NOT use:
+
+```text
+wellness_resources
+counselor_reviews
+```
+
+unless the team later decides to add them.
 
 ---
 
-# 16. Initialize Firebase in the Flutter Project
+# 21. User Roles
 
-Inside the Flutter project, run:
-
-```powershell
-firebase init
-```
-
-Select the Firebase services required by the project.
-
-For a Flutter + Firebase application, Firestore is one of the main services.
-
-This can create files such as:
-
-```text
-firebase.json
-firestore.rules
-firestore.indexes.json
-```
-
-These files should normally be committed to Git.
-
----
-
-# 17. Firebase Storage
-
-Firebase Storage can be used when the application needs to store files such as:
-
-* Profile pictures
-* Counselor verification documents
-* Chat attachments
-
-Add Firebase Storage:
-
-```powershell
-flutter pub add firebase_storage
-```
-
-Enable Storage from:
-
-```text
-Firebase Console
-    → Build
-    → Storage
-```
-
-Storage security rules should be configured before using Storage in production.
-
----
-
-# 18. MindCare Wellness Firestore Structure
-
-For the MindCare Wellness application, the planned Firestore structure is:
-
-```text
-Firestore
-│
-├── users
-├── students
-├── counselors
-├── counselor_availability
-├── appointments
-├── conversations
-├── messages
-├── notifications
-├── mood_entries
-├── journal_entries
-├── session_notes
-└── admin_actions
-```
-
-### users
-
-Stores common information about authenticated users.
-
-Example:
-
-```text
-users/{uid}
-
-uid
-role
-fullName
-email
-phoneNumber
-whatsappNumber
-profileImageUrl
-emailVerified
-accountStatus
-createdAt
-updatedAt
-```
-
-Roles:
+MindCare has three main roles:
 
 ```text
 student
@@ -609,424 +610,417 @@ counselor
 admin
 ```
 
-Passwords must never be stored here.
+The application determines the user's role from:
+
+```text
+users/{uid}
+```
+
+Example:
+
+```text
+users/{uid}
+    role: student
+```
+
+or:
+
+```text
+users/{uid}
+    role: counselor
+```
+
+or:
+
+```text
+users/{uid}
+    role: admin
+```
 
 ---
 
-### students
+# 22. Firebase Authentication
 
-Stores student-specific information:
+Firebase Authentication handles:
+
+* Registration
+* Login
+* Logout
+* Password reset
+* Email verification
+
+Passwords must NOT be stored in Firestore.
+
+The authenticated Firebase user's UID should be used as the user's identifier.
+
+Example:
+
+```dart
+final uid = FirebaseAuth.instance.currentUser!.uid;
+```
+
+---
+
+# 23. Student Data
+
+Student authentication information and student academic information are kept separately.
+
+Authentication/user information:
+
+```text
+users/{uid}
+```
+
+Student-specific information:
 
 ```text
 students/{uid}
+```
 
-uid
+Student information can include:
+
+```text
 studentId
+alias
 faculty
 department
 degreeProgram
 academicYear
 batch
 enrollmentStatus
-createdAt
-updatedAt
+priorityLevel
 ```
+
+Do not duplicate these fields into unrelated documents unless there is a specific architectural reason.
 
 ---
 
-### counselors
+# 24. Student Priority
 
-Stores counselor professional information:
-
-```text
-counselors/{uid}
-
-uid
-counselorId
-department
-qualifications
-specializations
-yearsOfExperience
-registrationNumber
-registrationBody
-professionalBio
-languages
-sessionTypes
-officeLocation
-verificationStatus
-accountStatus
-createdAt
-updatedAt
-```
-
-Counselor verification status can be:
+Students have:
 
 ```text
-pending
-approved
-rejected
+priorityLevel
 ```
+
+Possible values:
+
+```text
+normal
+high
+```
+
+The default value is:
+
+```text
+normal
+```
+
+A counselor can mark a student as high priority from the appropriate active-session workflow.
+
+The operation should only modify:
+
+```text
+priorityLevel
+```
+
+It should not overwrite the student's other profile information.
 
 ---
 
-### counselor_availability
+# 25. Counselor Accounts
 
-Stores counselor availability:
+Counselors require administrative verification.
+
+Typical workflow:
 
 ```text
-counselor_availability/{availabilityId}
-
-counselorId
-dayOfWeek
-startTime
-endTime
-sessionDuration
-isAvailable
-createdAt
-updatedAt
+Counselor registers
+        ↓
+Account status = pending
+        ↓
+Admin reviews counselor
+        ↓
+Admin approves/rejects
+        ↓
+Approved counselor
+        ↓
+Account becomes active
 ```
+
+Counselors should not receive access to restricted counselor functionality before approval.
 
 ---
 
-### appointments
+# 26. Admin Security
 
-Stores counseling appointments:
+The application uses two concepts:
 
-```text
-appointments/{appointmentId}
-
-studentId
-counselorId
-appointmentDate
-startTime
-endTime
-sessionType
-status
-reason
-meetingLink
-location
-studentNotes
-cancellationReason
-cancelledBy
-createdAt
-updatedAt
-```
-
-Appointment statuses:
+### Firestore user role
 
 ```text
-pending
-confirmed
-rejected
-cancelled
-rescheduled
-completed
-no_show
+users/{uid}.role = "admin"
 ```
 
----
+This is useful for application-level routing/UI.
 
-### conversations
-
-Stores counseling conversations:
-
-```text
-conversations/{conversationId}
-
-studentId
-counselorId
-appointmentId
-status
-lastMessage
-lastMessageAt
-createdAt
-updatedAt
-```
-
----
-
-### messages
-
-Stores individual chat messages:
-
-```text
-messages/{messageId}
-
-conversationId
-senderId
-receiverId
-messageType
-message
-attachmentUrl
-isRead
-sentAt
-```
-
----
-
-### notifications
-
-Stores application notifications:
-
-```text
-notifications/{notificationId}
-
-userId
-title
-body
-type
-relatedId
-isRead
-createdAt
-```
-
----
-
-### mood_entries
-
-Stores private student mood entries:
-
-```text
-mood_entries/{moodEntryId}
-
-studentId
-mood
-moodScore
-note
-createdAt
-```
-
----
-
-### journal_entries
-
-Stores private student journal entries:
-
-```text
-journal_entries/{journalId}
-
-studentId
-title
-content
-mood
-createdAt
-updatedAt
-```
-
----
-
-### session_notes
-
-Stores private counselor session notes separately from appointments:
-
-```text
-session_notes/{sessionNoteId}
-
-appointmentId
-studentId
-counselorId
-note
-createdAt
-updatedAt
-```
-
-Session notes should not be placed directly inside an appointment document if students are allowed to read their appointment documents.
-
----
-
-### admin_actions
-
-Stores administrative actions:
-
-```text
-admin_actions/{actionId}
-
-adminId
-action
-targetUserId
-targetRole
-reason
-createdAt
-```
-
----
-
-# 19. Firebase Security
-
-The application has three main roles:
-
-```text
-Student
-Counselor
-Admin
-```
-
-Security rules should restrict access according to the authenticated user's role and ownership.
-
-### Student
-
-A student should generally be able to:
-
-```text
-Read/update own profile
-Create/read own appointments
-Read own notifications
-Create/read own mood entries
-Create/read own journal entries
-Participate in permitted conversations
-```
-
-### Counselor
-
-An approved counselor should generally be able to:
-
-```text
-Manage own availability
-Read/manage own appointments
-Participate in assigned conversations
-Send/read messages in permitted conversations
-Create/read own session notes
-```
-
-### Admin
-
-Administrators should be able to perform administrative operations such as:
-
-```text
-Approve counselors
-Reject counselors
-Suspend accounts
-Reactivate accounts
-Manage administrative records
-```
-
-Admin authorization should use a Firebase Authentication custom claim:
+### Firebase custom claim
 
 ```text
 admin: true
 ```
 
-rather than relying only on the `role` field stored in Firestore.
+This is used for privileged Firestore authorization.
+
+Do not rely only on:
+
+```text
+users/{uid}.role == "admin"
+```
+
+for highly privileged Firestore operations.
 
 ---
 
-# 20. Recommended Flutter Project Structure
+# 27. Private Admin Files
 
-After the initial setup, organize the project as follows:
+Some administrative files must NEVER be committed to GitHub.
+
+Examples:
 
 ```text
-lib/
-│
-├── main.dart
-├── firebase_options.dart
-│
-├── models/
-│   ├── app_user.dart
-│   ├── student.dart
-│   ├── counselor.dart
-│   ├── appointment.dart
-│   ├── conversation.dart
-│   ├── message.dart
-│   └── session_note.dart
-│
-├── services/
-│   ├── auth_service.dart
-│   ├── user_service.dart
-│   ├── appointment_service.dart
-│   ├── counselor_service.dart
-│   ├── message_service.dart
-│   └── session_note_service.dart
-│
-├── screens/
-│   ├── auth/
-│   ├── student/
-│   ├── counselor/
-│   └── admin/
-│
-├── widgets/
-│
-└── utils/
+serviceAccountKey.json
+.env
 ```
 
-This keeps:
+The Firebase Admin SDK service account key must remain in the private admin environment.
+
+Example:
 
 ```text
-UI
-↓
-Services
-↓
-Firebase
-```
-
-separated from each other.
-
----
-
-# 21. Recommended Development Order
-
-Do not implement every Firebase feature at once.
-
-A recommended order is:
-
-```text
-1. Flutter environment
-        ↓
-2. Android emulator
-        ↓
-3. Firebase project
-        ↓
-4. FlutterFire configuration
-        ↓
-5. Firebase Core
-        ↓
-6. Firebase Authentication
-        ↓
-7. User profiles
-        ↓
-8. Firestore security rules
-        ↓
-9. Student features
-        ↓
-10. Counselor features
-        ↓
-11. Counselor availability
-        ↓
-12. Appointments
-        ↓
-13. Chat / conversations
-        ↓
-14. Notifications
-        ↓
-15. Mood tracking
-        ↓
-16. Journaling
-        ↓
-17. Counselor session notes
-        ↓
-18. Admin functionality
-        ↓
-19. Testing
-        ↓
-20. Production security review
+mindcare-admin/
+├── set-admin.js
+├── package.json
+├── package-lock.json
+├── .env                     ← PRIVATE
+└── serviceAccountKey.json   ← PRIVATE
 ```
 
 ---
 
-# 22. Useful Commands
+# 28. Git Security
 
-### Check Flutter
+Before committing code, check:
 
 ```powershell
-flutter doctor
+git status
 ```
 
-### Check Flutter version
+Make sure private files are not included.
+
+Never commit:
+
+```text
+.env
+serviceAccountKey.json
+*.jks
+*.keystore
+key.properties
+```
+
+These files should be included in `.gitignore`.
+
+---
+
+# 29. Firebase Client Configuration
+
+The following file is normally safe to commit:
+
+```text
+lib/firebase_options.dart
+```
+
+Do not confuse it with:
+
+```text
+serviceAccountKey.json
+```
+
+They serve completely different purposes.
+
+### Client configuration
+
+```text
+firebase_options.dart
+```
+
+Used by the Flutter application.
+
+### Admin credentials
+
+```text
+serviceAccountKey.json
+```
+
+Provides privileged Firebase Admin SDK access.
+
+The Admin SDK private key must remain secret.
+
+---
+
+# 30. Android Signing Files
+
+You may encounter these files when preparing a release build:
+
+```text
+android/key.properties
+```
+
+and:
+
+```text
+*.jks
+*.keystore
+```
+
+These are Android signing credentials.
+
+They should NOT be committed to GitHub.
+
+If they do not exist in your development environment, that is normal.
+
+They are generally needed when configuring release signing rather than basic emulator development.
+
+---
+
+# 31. Git Workflow
+
+Before starting work:
+
+```powershell
+git pull
+```
+
+Create a feature branch:
+
+```powershell
+git checkout -b feature/<feature-name>
+```
+
+Example:
+
+```powershell
+git checkout -b feature/student-profile
+```
+
+Make your changes.
+
+Check:
+
+```powershell
+git status
+```
+
+Run the application and test your changes.
+
+Then:
+
+```powershell
+git add .
+```
+
+Commit:
+
+```powershell
+git commit -m "Add student profile"
+```
+
+Push:
+
+```powershell
+git push -u origin feature/student-profile
+```
+
+Create a Pull Request on GitHub.
+
+---
+
+# 32. Do Not Directly Modify Another Person's Feature
+
+Before modifying another developer's feature:
+
+1. Check the current branch.
+2. Pull the latest changes.
+3. Discuss major architectural changes with the team.
+4. Avoid overwriting another person's work.
+5. Use feature branches.
+6. Create Pull Requests.
+
+---
+
+# 33. Before Pushing Code
+
+Always run:
+
+```powershell
+flutter analyze
+```
+
+Then:
+
+```powershell
+flutter test
+```
+
+If applicable, run:
+
+```powershell
+flutter run
+```
+
+Then check:
+
+```powershell
+git status
+```
+
+Make sure no secrets are staged.
+
+---
+
+# 34. Common Commands
+
+### Check Flutter
 
 ```powershell
 flutter --version
 ```
 
-### Check connected devices
+### Check Flutter environment
+
+```powershell
+flutter doctor
+```
+
+### Get dependencies
+
+```powershell
+flutter pub get
+```
+
+### Analyze code
+
+```powershell
+flutter analyze
+```
+
+### Run tests
+
+```powershell
+flutter test
+```
+
+### Check devices
 
 ```powershell
 flutter devices
@@ -1038,75 +1032,76 @@ flutter devices
 flutter run
 ```
 
-### Get Flutter dependencies
+### Clean Flutter build files
+
+```powershell
+flutter clean
+```
+
+Then:
 
 ```powershell
 flutter pub get
 ```
 
-### Add a Flutter package
+### Check Git
 
 ```powershell
-flutter pub add package_name
+git status
 ```
 
-### Upgrade packages
+### Get latest GitHub changes
 
 ```powershell
-flutter pub upgrade
-```
-
-### Check Firebase CLI
-
-```powershell
-firebase --version
-```
-
-### Login to Firebase
-
-```powershell
-firebase login
-```
-
-### List Firebase projects
-
-```powershell
-firebase projects:list
-```
-
-### Configure FlutterFire
-
-```powershell
-flutterfire configure
-```
-
-### Initialize Firebase CLI
-
-```powershell
-firebase init
-```
-
-### Deploy Firestore rules
-
-```powershell
-firebase deploy --only firestore:rules
-```
-
-### Deploy Firestore indexes
-
-```powershell
-firebase deploy --only firestore:indexes
+git pull
 ```
 
 ---
 
-# 23. Verify the Complete Environment
+# 35. Common Problems
 
-Before starting application development, verify:
+## Problem: `flutter` is not recognized
+
+Check that Flutter's `bin` directory is in PATH.
+
+Example:
+
+```text
+D:\flutter\bin
+```
+
+Restart PowerShell after changing PATH.
+
+---
+
+## Problem: Android SDK not found
+
+Open Android Studio:
+
+```text
+SDK Manager
+```
+
+Install the required Android SDK components.
+
+Then run:
 
 ```powershell
 flutter doctor
 ```
+
+---
+
+## Problem: No Android emulator
+
+Open:
+
+```text
+Android Studio
+→ Device Manager
+```
+
+Create/start an emulator.
 
 Then:
 
@@ -1114,120 +1109,210 @@ Then:
 flutter devices
 ```
 
-Then:
+---
+
+## Problem: Flutter dependencies are missing
+
+Run:
 
 ```powershell
-firebase projects:list
+flutter pub get
 ```
 
-Then:
+---
 
-```powershell
-flutterfire --version
+## Problem: Firebase permission denied
+
+If Firestore returns:
+
+```text
+PERMISSION_DENIED
 ```
 
-Finally:
+do not immediately change the security rules.
+
+First check:
+
+* Is the user logged in?
+* Is the user email verified if required?
+* Does the user's Firestore document exist?
+* Does the user have the correct role?
+* Is the operation allowed by `firestore.rules`?
+* Is the user using the correct Firebase project?
+
+Contact the project owner before weakening Firestore security rules.
+
+---
+
+# 36. Important Security Rules
+
+Never:
+
+* Store passwords in Firestore
+* Commit service-account credentials
+* Commit `.env` files containing secrets
+* Commit Android signing keys
+* Disable Firestore rules just to make an operation work
+* Give students access to other students' private data
+* Give students access to counselor private session notes
+* Trust a client-provided role for privileged operations
+* Hardcode administrative credentials in Flutter code
+
+---
+
+# 37. Data Privacy
+
+MindCare handles potentially sensitive counseling-related information.
+
+Developers must be especially careful with:
+
+```text
+mood_entries
+journal_entries
+session_notes
+appointments
+messages
+student profiles
+```
+
+Do not expose private information through:
+
+* Debug logs
+* Screenshots
+* GitHub commits
+* Test data
+* Public repositories
+* Hardcoded credentials
+
+Use fictional data when creating test records.
+
+---
+
+# 38. Development Rule
+
+When implementing a new feature:
+
+```text
+1. Understand the existing architecture
+2. Check existing models
+3. Check existing services
+4. Check existing Firestore structure
+5. Reuse existing code where possible
+6. Make minimal changes
+7. Implement the feature
+8. Test it
+9. Run flutter analyze
+10. Commit using a clear message
+11. Push to your feature branch
+12. Create a Pull Request
+```
+
+Avoid creating duplicate:
+
+```text
+models
+services
+Firestore collections
+authentication systems
+```
+
+when an existing implementation can be extended.
+
+---
+
+# 39. Recommended First-Time Setup
+
+A new collaborator should follow these commands in order:
 
 ```powershell
+# 1. Clone repository
+git clone <GITHUB_REPOSITORY_URL>
+
+# 2. Enter project
+cd mindcare
+
+# 3. Check Flutter
+flutter doctor
+
+# 4. Install Flutter dependencies
+flutter pub get
+
+# 5. Check available devices
+flutter devices
+
+# 6. Start Android emulator if necessary
+
+# 7. Run application
 flutter run
+
+# 8. Check code
+flutter analyze
+
+# 9. Run tests
+flutter test
 ```
 
-The expected environment is:
-
-```text
-Flutter
-   │
-   ├── VS Code
-   │
-   └── Android Emulator
-          │
-          ▼
-     Flutter Application
-          │
-          ▼
-       Firebase
-       ├── Authentication
-       ├── Firestore
-       └── Storage
-```
+If all of these work, the basic development environment is ready.
 
 ---
 
-# 24. Important Security Rules
+# 40. Team Development Structure
 
-Never commit sensitive credentials to GitHub.
-
-Do not commit:
+Recommended responsibilities can be divided into areas such as:
 
 ```text
-serviceAccountKey.json
-.env
-*.jks
-*.keystore
-key.properties
+Developer 1
+    UI / Screens
+
+Developer 2
+    Authentication / User Profiles
+
+Developer 3
+    Firestore / Database / Security Rules
+
+Developer 4
+    Appointments / Availability
+
+Developer 5
+    Messaging / Notifications
+
+Developer 6
+    Testing / Integration
 ```
 
-Firebase service-account credentials must remain in a trusted server/admin environment and should never be placed inside the Flutter application.
-
-`firebase_options.dart` is normally safe to commit because Firebase client configuration is not equivalent to a service-account private key.
+These responsibilities can overlap, but developers should coordinate before changing shared models, Firestore rules, or database structures.
 
 ---
 
-# 25. Final Setup Checklist
+# 41. Final Checklist
 
-Use this checklist before starting development:
+Before considering your setup complete:
 
+* [ ] Git installed
 * [ ] Flutter installed
-* [ ] Flutter added to PATH
+* [ ] `flutter doctor` checked
+* [ ] Android Studio installed
+* [ ] Android SDK installed
+* [ ] Android emulator created
 * [ ] VS Code installed
 * [ ] Flutter extension installed
 * [ ] Dart extension installed
-* [ ] Android Studio installed
-* [ ] Android SDK installed
-* [ ] Android SDK Command-line Tools installed
-* [ ] Android licenses accepted
-* [ ] Android Emulator created
-* [ ] Flutter detects emulator
-* [ ] Node.js installed
-* [ ] Firebase CLI installed
-* [ ] Firebase CLI logged in
-* [ ] FlutterFire CLI installed
-* [ ] Firebase project created
-* [ ] Flutter project created
-* [ ] Flutter project connected to Firebase
-* [ ] `firebase_core` installed
-* [ ] Firebase Authentication enabled
-* [ ] Cloud Firestore enabled
-* [ ] Firebase Storage enabled if required
-* [ ] Firestore rules configured
-* [ ] Firebase configuration tested
-* [ ] Project runs successfully on Android emulator
-* [ ] Git repository configured
-* [ ] Sensitive credentials excluded from Git
-* [ ] Team members have the required Firebase/GitHub access
+* [ ] Repository cloned
+* [ ] `flutter pub get` completed
+* [ ] Firebase project access confirmed
+* [ ] Android emulator starts
+* [ ] `flutter devices` detects emulator
+* [ ] `flutter run` works
+* [ ] Firebase Authentication works
+* [ ] Firestore connection works
+* [ ] No private credentials committed
+* [ ] `flutter analyze` passes
+* [ ] `flutter test` passes
 
 ---
 
-## Environment Ready
+# 42. Important Rule for Collaborators
 
-Once all checklist items are completed, the development environment is ready for building the Flutter + Firebase application.
+If you are unsure whether a change affects the database, authentication, security rules, or another developer's feature, **ask the team before making the change**.
 
-The basic architecture is:
-
-```text
-                    MindCare Flutter App
-                            │
-             ┌──────────────┼──────────────┐
-             │              │              │
-             ▼              ▼              ▼
-       Authentication    Firestore      Storage
-             │              │              │
-             ▼              ▼              ▼
-          Users          App Data       Files
-             │
-       ┌─────┴─────┐
-       │           │
-    Student    Counselor
-                    │
-                  Admin
-```
+The goal is to keep the MindCare architecture consistent and avoid breaking existing functionality.
