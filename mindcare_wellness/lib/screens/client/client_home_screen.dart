@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../auth/login_screen.dart';
+import '../student/student_privacy_settings_screen.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/auth_widgets.dart';
 
@@ -18,10 +20,51 @@ class ClientHomeScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: [
-          IconButton(
-            tooltip: 'Log out',
-            onPressed: () => authService.logout(),
-            icon: const Icon(Icons.logout_rounded),
+          PopupMenuButton<String>(
+            tooltip: 'Account menu',
+            onSelected: (value) async {
+              if (value == 'settings') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StudentPrivacySettingsScreen(
+                      studentId: authService.currentUser?.uid ?? '',
+                    ),
+                  ),
+                );
+                return;
+              }
+              if (value == 'logout') {
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Log out'),
+                    content: const Text('Are you sure you want to sign out?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Log out'),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldLogout != true) return;
+                await authService.logout();
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => LoginScreen(authService: authService)),
+                  (route) => false,
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'settings', child: Text('Settings')),
+              PopupMenuItem(value: 'logout', child: Text('Logout')),
+            ],
           ),
         ],
       ),

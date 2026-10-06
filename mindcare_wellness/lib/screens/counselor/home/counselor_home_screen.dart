@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/counselor_models.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/counselor_service.dart';
 import '../../../widgets/common/empty_state.dart';
 import '../../../widgets/common/error_message.dart';
@@ -12,13 +13,40 @@ import '../calendar/counselor_calendar_screen.dart';
 import '../notes/counselor_notes_screen.dart';
 import 'home_widgets.dart';
 
-class CounselorHomeScreen extends StatelessWidget {
-  const CounselorHomeScreen({required this.service, super.key});
+class CounselorHomeScreen extends StatefulWidget {
+  const CounselorHomeScreen({
+    required this.service,
+    required this.authService,
+    super.key,
+  });
+
   final CounselorService service;
+  final AuthService authService;
+
+  @override
+  State<CounselorHomeScreen> createState() => _CounselorHomeScreenState();
+}
+
+class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
+  late Future<CounselorProfile> _profileFuture;
+  late Stream<List<CounselorAppointment>> _appointmentsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileFuture = widget.service.getProfile();
+    _appointmentsStream = widget.service.appointments();
+  }
+
+  Future<void> _refreshProfile() async {
+    setState(() {
+      _profileFuture = widget.service.getProfile();
+    });
+  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<CounselorProfile>(
-    future: service.getProfile(),
+    future: _profileFuture,
     builder: (context, profileSnapshot) {
       if (profileSnapshot.connectionState == ConnectionState.waiting) {
         return const LoadingWidget();
@@ -29,7 +57,7 @@ class CounselorHomeScreen extends StatelessWidget {
         );
       }
       return StreamBuilder<List<CounselorAppointment>>(
-        stream: service.appointments(),
+        stream: _appointmentsStream,
         builder: (context, appointmentSnapshot) {
           final appointments =
               appointmentSnapshot.data ?? const <CounselorAppointment>[];
@@ -56,12 +84,16 @@ class CounselorHomeScreen extends StatelessWidget {
               .length;
           return SafeArea(
             child: RefreshIndicator(
-              onRefresh: service.getProfile,
+              onRefresh: _refreshProfile,
               color: dashboardGreen,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(17, 10, 17, 28),
                 children: [
-                  PortalHeader(profile: profileSnapshot.data!),
+                  PortalHeader(
+                    profile: profileSnapshot.data!,
+                    service: widget.service,
+                    authService: widget.authService,
+                  ),
                   const SizedBox(height: 6),
                   _DateLine(date: DateTime.now()),
                   const SizedBox(height: 5),
@@ -87,7 +119,7 @@ class CounselorHomeScreen extends StatelessWidget {
                   else
                     _NextAppointmentCard(
                       item: upcoming.first,
-                      service: service,
+                      service: widget.service,
                     ),
                   const SizedBox(height: 22),
                   const _SectionTitle('Remaining bookings today'),
@@ -105,7 +137,7 @@ class CounselorHomeScreen extends StatelessWidget {
                           MaterialPageRoute(
                             builder: (_) => AppointmentDetailsScreen(
                               item: item,
-                              service: service,
+                              service: widget.service,
                             ),
                           ),
                         ),
@@ -120,7 +152,7 @@ class CounselorHomeScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => Scaffold(
                           backgroundColor: dashboardMint,
-                          body: CounselorCalendarScreen(service: service),
+                          body: CounselorCalendarScreen(service: widget.service),
                         ),
                       ),
                     ),
@@ -129,7 +161,7 @@ class CounselorHomeScreen extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (_) => Scaffold(
                           backgroundColor: dashboardMint,
-                          body: CounselorNotesScreen(service: service),
+                          body: CounselorNotesScreen(service: widget.service),
                         ),
                       ),
                     ),

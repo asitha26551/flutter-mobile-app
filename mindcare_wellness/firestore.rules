@@ -55,7 +55,7 @@ service cloud.firestore {
           && request.resource.data.uid == resource.data.uid
           && request.resource.data.createdAt == resource.data.createdAt
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'studentId', 'alias', 'faculty', 'department', 'degreeProgram',
+            'studentId', 'alias', 'isAnonymous', 'faculty', 'department', 'degreeProgram',
             'academicYear', 'batch', 'intake', 'phoneNumber', 'whatsappNumber',
             'alternativePhone', 'profileImageUrl', 'authorizedCounselorIds', 'updatedAt'
           ]))

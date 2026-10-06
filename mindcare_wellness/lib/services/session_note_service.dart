@@ -76,16 +76,29 @@ class SessionNoteService {
           ? AppointmentModel.fromFirestore(appointment)
           : null;
       final studentId = appointmentModel?.studentId ?? note.studentId;
-      final studentSnapshot = studentId.isNotEmpty
-          ? await _firestore.collection('students').doc(studentId).get()
-          : null;
-      final student = studentSnapshot != null && studentSnapshot.exists
-          ? StudentModel.fromFirestore(studentSnapshot)
-          : StudentModel(uid: studentId);
-      final userSnapshot = studentId.isNotEmpty
-          ? await _firestore.collection('users').doc(studentId).get()
-          : null;
-      final fullName = (userSnapshot?.data()?['fullName'] as String?)?.trim() ?? '';
+      StudentModel student = StudentModel(uid: studentId);
+
+      if (studentId.isNotEmpty) {
+        try {
+          final studentSnapshot = await _firestore.collection('students').doc(studentId).get();
+          if (studentSnapshot.exists) {
+            student = StudentModel.fromFirestore(studentSnapshot);
+          }
+        } catch (_) {
+          student = StudentModel(uid: studentId);
+        }
+      }
+
+      String fullName = '';
+      if (studentId.isNotEmpty) {
+        try {
+          final userSnapshot = await _firestore.collection('users').doc(studentId).get();
+          fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
+        } catch (_) {
+          fullName = '';
+        }
+      }
+
       final displayName = student.counselorDisplayName(fullName: fullName);
 
       return SessionNoteEntry(

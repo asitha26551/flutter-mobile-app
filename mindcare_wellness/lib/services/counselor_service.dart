@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/counselor_models.dart';
 import '../models/student_model.dart';
+import 'student_service.dart';
 
 class CounselorService {
   CounselorService({FirebaseFirestore? firestore, FirebaseAuth? auth})
@@ -20,23 +21,66 @@ class CounselorService {
     return CounselorProfile(user: user.data() ?? const {}, details: details.data() ?? const {});
   }
 
+  Future<void> updateProfile({
+    required String fullName,
+    String? phoneNumber,
+    String? department,
+    String? professionalRole,
+    String? professionalBio,
+    String? officeLocation,
+  }) async {
+    final batch = _firestore.batch();
+    final userData = <String, dynamic>{
+      'fullName': fullName.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (phoneNumber != null) {
+      userData['phoneNumber'] = phoneNumber.trim();
+    }
+    batch.update(_firestore.collection('users').doc(uid), userData);
+
+    final counselorData = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (department != null) counselorData['department'] = department.trim();
+    if (professionalRole != null) {
+      counselorData['professionalRole'] = professionalRole.trim();
+    }
+    if (professionalBio != null) {
+      counselorData['professionalBio'] = professionalBio.trim();
+    }
+    if (officeLocation != null) {
+      counselorData['officeLocation'] = officeLocation.trim();
+    }
+    if (counselorData.length > 1) {
+      batch.update(_firestore.collection('counselors').doc(uid), counselorData);
+    }
+    await batch.commit();
+  }
+
   Stream<List<CounselorAppointment>> appointments() => _firestore
       .collection('appointments')
       .where('counselorId', isEqualTo: uid)
       .snapshots()
       .asyncMap((snapshot) async {
         final items = <CounselorAppointment>[];
+        final studentService = StudentService(firestore: _firestore, auth: _auth);
         for (final doc in snapshot.docs) {
           final data = Map<String, dynamic>.from(doc.data());
           final studentId = (data['studentId'] as String?) ?? (data['userId'] as String?) ?? '';
           if (studentId.isNotEmpty) {
-            final studentDoc = await _firestore.collection('students').doc(studentId).get();
-            final userDoc = await _firestore.collection('users').doc(studentId).get();
-            final student = studentDoc.exists
-                ? StudentModel.fromFirestore(studentDoc)
-                : StudentModel(uid: studentId);
-            final fullName = (userDoc.data()?['fullName'] as String?)?.trim() ?? '';
-            data['studentAlias'] = student.counselorDisplayName(fullName: fullName);
+            try {
+              final resolved = await studentService.resolveIdentity(studentId);
+              final student = resolved['student'] as StudentModel? ?? StudentModel(uid: studentId);
+              final fullName = (resolved['fullName'] as String?) ?? '';
+              final displayName = student.counselorDisplayName(fullName: fullName);
+              data['studentAlias'] = displayName;
+              data['studentIdentity'] = displayName;
+            } catch (_) {
+              final student = StudentModel(uid: studentId);
+              data['studentAlias'] = student.counselorDisplayName();
+              data['studentIdentity'] = student.counselorDisplayName();
+            }
           }
           items.add(CounselorAppointment(id: doc.id, data: data));
         }
