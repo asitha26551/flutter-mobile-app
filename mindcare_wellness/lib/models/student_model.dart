@@ -31,6 +31,32 @@ class StudentModel {
 
   bool get isHighPriority => priorityLevel == 'high';
 
+  String counselorDisplayName({String? fullName}) {
+    final aliasValue = alias?.trim();
+    if (aliasValue != null && aliasValue.isNotEmpty) return aliasValue;
+    final trimmedFullName = (fullName ?? '').trim();
+    if (trimmedFullName.isNotEmpty) return trimmedFullName;
+    return 'Student';
+  }
+
+  bool matchesCounselorSearch(String query, {String? fullName}) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return true;
+
+    final aliasValue = alias?.trim() ?? '';
+    final fullNameValue = (fullName ?? '').trim();
+    final haystacks = [
+      aliasValue,
+      fullNameValue,
+      aliasValue.toLowerCase(),
+      fullNameValue.toLowerCase(),
+    ];
+
+    return haystacks.any(
+      (value) => value.toLowerCase().contains(normalizedQuery.toLowerCase()),
+    );
+  }
+
   factory StudentModel.fromFirestore(
     DocumentSnapshot<Map<String, dynamic>> snapshot,
   ) {

@@ -22,6 +22,18 @@ class StudentService {
     return snapshot.exists ? StudentModel.fromFirestore(snapshot) : null;
   }
 
+  Future<Map<String, dynamic>> resolveIdentity(String studentId) async {
+    final student = await get(studentId) ?? StudentModel(uid: studentId);
+    final userSnapshot = await _firestore.collection('users').doc(studentId).get();
+    final fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
+    return {
+      'student': student,
+      'fullName': fullName,
+      'displayName': student.counselorDisplayName(fullName: fullName),
+      'searchText': [student.alias ?? '', fullName].join(' '),
+    };
+  }
+
   Future<StudentModel?> mine() => get(uid);
 
   Future<void> updatePriority({
