@@ -16,6 +16,13 @@ class CounselorReportsScreen extends StatefulWidget {
 class _CounselorReportsScreenState extends State<CounselorReportsScreen> {
   _ReportRange _range = _ReportRange.thisWeek;
   DateTimeRange? _customRange;
+  late final Stream<List<CounselorAppointment>> _appointmentsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _appointmentsStream = widget.service.appointments();
+  }
 
   DateTimeRange get _selectedRange => _customRange ?? _range.range(DateTime.now());
 
@@ -49,7 +56,7 @@ class _CounselorReportsScreenState extends State<CounselorReportsScreen> {
   @override
   Widget build(BuildContext context) => SafeArea(
     child: StreamBuilder<List<CounselorAppointment>>(
-      stream: widget.service.appointments(),
+      stream: _appointmentsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: dashboardGreen));

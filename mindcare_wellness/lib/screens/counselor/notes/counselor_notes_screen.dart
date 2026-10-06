@@ -20,8 +20,15 @@ class CounselorNotesScreen extends StatefulWidget {
 class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   final _noteService = SessionNoteService();
   final _searchController = TextEditingController();
+  late final Stream<List<SessionNoteModel>> _notesStream;
   Future<List<SessionNoteEntry>>? _entriesFuture;
   String _entryKey = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _notesStream = _noteService.forCounselor();
+  }
 
   @override
   void dispose() {
@@ -41,7 +48,7 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   @override
   Widget build(BuildContext context) => SafeArea(
     child: StreamBuilder<List<SessionNoteModel>>(
-      stream: _noteService.forCounselor(),
+      stream: _notesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
