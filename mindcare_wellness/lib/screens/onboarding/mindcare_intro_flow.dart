@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../widgets/auth_gate.dart';
 import 'mindcare_onboarding_screen.dart';
-import 'mindcare_splash_screen.dart';
 
 class MindCareIntroFlow extends StatefulWidget {
   const MindCareIntroFlow({super.key});
@@ -12,9 +11,8 @@ class MindCareIntroFlow extends StatefulWidget {
 }
 
 class _MindCareIntroFlowState extends State<MindCareIntroFlow> {
-  _IntroStage _stage = _IntroStage.splash;
+  _IntroStage _stage = _IntroStage.onboarding;
 
-  void _showOnboarding() => setState(() => _stage = _IntroStage.onboarding);
   void _continueToApp() => setState(() => _stage = _IntroStage.app);
 
   @override
@@ -23,17 +21,18 @@ class _MindCareIntroFlowState extends State<MindCareIntroFlow> {
     switchInCurve: Curves.easeOutCubic,
     switchOutCurve: Curves.easeInCubic,
     child: switch (_stage) {
-      _IntroStage.splash => MindCareSplashScreen(
-        key: const ValueKey('splash'),
-        onComplete: _showOnboarding,
-      ),
       _IntroStage.onboarding => MindCareOnboardingScreen(
         key: const ValueKey('onboarding'),
         onComplete: _continueToApp,
       ),
-      _IntroStage.app => const AuthGate(key: ValueKey('app')),
+      _IntroStage.app => const AuthGate(
+        key: ValueKey('app'),
+      ),
     },
   );
 }
 
-enum _IntroStage { splash, onboarding, app }
+enum _IntroStage {
+  onboarding,
+  app,
+}
