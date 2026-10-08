@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "786351565039",
+    "project_id": "counselor-booking-a5e04",
+    "storage_bucket": "counselor-booking-a5e04.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:786351565039:android:895d42cc68c183b549131a",
+        "android_client_info": {
+          "package_name": "com.example.mindcare_wellness"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCkl37Fj5AB3LcoiseLZih8HYal7r5JpmA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

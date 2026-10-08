@@ -1,0 +1,310 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId
+        || isAdmin()
+        || (
+          isApprovedCounselor()
+          && exists(/databases/$(database)/documents/students/$(userId))
+          && get(/databases/$(database)/documents/students/$(userId)).data.authorizedCounselorIds is list
+          && request.auth.uid in get(/databases/$(database)/documents/students/$(userId)).data.authorizedCounselorIds
+        )
+      );
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && request.resource.data.uid == userId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.emailVerified == false
+        && ((request.resource.data.role == 'student' && request.resource.data.accountStatus == 'active')
+          || (request.resource.data.role == 'counselor' && request.resource.data.accountStatus == 'pending' && request.resource.data.verificationStatus == 'pending'));
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.accountStatus == resource.data.accountStatus
+          && request.resource.data.verificationStatus == resource.data.verificationStatus
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.email == resource.data.email
+          && (request.resource.data.emailVerified == resource.data.emailVerified || request.resource.data.emailVerified == request.auth.token.email_verified)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'phoneNumber', 'whatsappNumber', 'alternativePhone', 'profileImageUrl', 'updatedAt', 'emailVerified']));
+      allow delete: if isAdmin();
+    }
+
+    match /students/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId
+        || isAdmin()
+        || (
+          isApprovedCounselor()
+          && resource.data.authorizedCounselorIds is list
+          && request.auth.uid in resource.data.authorizedCounselorIds
+        )
+      );
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && getAfter(/databases/$(database)/documents/users/$(userId)).data.role == 'student'
+        && request.resource.data.uid == userId
+        && request.resource.data.priorityLevel == 'normal';
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'studentId', 'alias', 'isAnonymous', 'faculty', 'department', 'degreeProgram',
+            'academicYear', 'batch', 'intake', 'phoneNumber', 'whatsappNumber',
+            'alternativePhone', 'profileImageUrl', 'authorizedCounselorIds', 'updatedAt'
+          ]))
+        || (
+          isApprovedCounselor()
+          && resource.data.authorizedCounselorIds is list
+          && request.auth.uid in resource.data.authorizedCounselorIds
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'priorityLevel', 'updatedAt'
+          ])
+          && request.resource.data.priorityLevel in ['normal', 'high']
+        );
+      allow delete: if isAdmin();
+    }
+
+    match /counselors/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn()
+        && request.auth.uid == userId
+        && getAfter(/databases/$(database)/documents/users/$(userId)).data.role == 'counselor'
+        && request.resource.data.uid == userId
+        && request.resource.data.verificationStatus == 'pending';
+      allow update: if isAdmin()
+        || (isSignedIn()
+          && request.auth.uid == userId
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.verificationStatus == resource.data.verificationStatus
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['staffId', 'department', 'qualification', 'qualificationInstitution', 'registrationNumber', 'registrationBody', 'specializations', 'yearsOfExperience', 'professionalBio', 'languages', 'officeLocation', 'sessionTypes', 'phoneNumber', 'whatsappNumber', 'alternativePhone', 'profileImageUrl', 'updatedAt']));
+      allow delete: if isAdmin();
+    }
+
+    match /counselor_public/{userId} {
+      allow read: if isSignedIn() && (
+        isAdmin()
+        || (resource.data.verificationStatus == 'approved'
+          && resource.data.accountStatus == 'active')
+      );
+      allow create, update: if isAdmin()
+        || (isSignedIn() && request.auth.uid == userId
+          && request.resource.data.verificationStatus == 'pending'
+          && request.resource.data.accountStatus == 'pending');
+      allow delete: if isAdmin();
+    }
+
+    match /counselor_availability/{availabilityId} {
+      allow read: if isSignedIn() && (
+        isAdmin()
+        || isApprovedCounselorWithId(resource.data.counselorId)
+        || (isStudent() && resource.data.isAvailable == true)
+      );
+      allow create: if isAdmin()
+        || (isApprovedCounselorWithId(request.resource.data.counselorId)
+        && request.resource.data.isAvailable is bool);
+      allow update: if isAdmin()
+        || (isApprovedCounselorWithId(resource.data.counselorId)
+        && request.resource.data.counselorId == resource.data.counselorId);
+      allow delete: if isAdmin() || isApprovedCounselorWithId(resource.data.counselorId);
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isSignedIn() && (
+        isAdmin()
+        || resource.data.studentId == request.auth.uid
+        || resource.data.userId == request.auth.uid
+        || resource.data.counselorId == request.auth.uid
+      );
+      allow create: if isStudent()
+        && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.counselorId is string
+        && request.resource.data.status == 'pending'
+        && request.resource.data.sessionType in ['chat', 'video', 'audio', 'in_person']
+        && request.resource.data.startAt is timestamp
+        && request.resource.data.endAt is timestamp
+        && request.resource.data.endAt > request.resource.data.startAt
+        && get(/databases/$(database)/documents/counselors/$(request.resource.data.counselorId)).data.verificationStatus == 'approved'
+        && get(/databases/$(database)/documents/counselors/$(request.resource.data.counselorId)).data.accountStatus == 'active';
+      allow update: if isSignedIn() && (
+        isAdmin()
+        || (resource.data.studentId == request.auth.uid
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.counselorId == resource.data.counselorId
+          && studentAppointmentUpdate())
+        || (resource.data.counselorId == request.auth.uid
+          && isApprovedCounselor()
+          && request.resource.data.studentId == resource.data.studentId
+          && request.resource.data.counselorId == resource.data.counselorId
+          && counselorAppointmentUpdate())
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /conversations/{conversationId} {
+      allow read, update: if isSignedIn() && (
+        isAdmin() || resource.data.studentId == request.auth.uid
+        || resource.data.counselorId == request.auth.uid
+      );
+      allow create: if isSignedIn() && (
+        (request.resource.data.studentId == request.auth.uid
+          || request.resource.data.counselorId == request.auth.uid)
+        && request.resource.data.status in ['active', 'closed']
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.studentId == request.resource.data.studentId
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.counselorId == request.resource.data.counselorId
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn() && existingMessageParticipant();
+      allow create: if isSignedIn() && messageParticipant();
+      allow update: if isSignedIn() && messageParticipant()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isAdmin();
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
+      allow delete: if false;
+    }
+
+    match /mood_entries/{entryId} {
+      allow read: if isOwner(resource.data.studentId);
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isSignedIn()
+        && isOwner(resource.data.studentId)
+        && request.resource.data.studentId == resource.data.studentId;
+      allow delete: if isOwner(resource.data.studentId);
+    }
+
+    match /journal_entries/{entryId} {
+      allow read: if isOwner(resource.data.studentId);
+      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
+      allow update: if isSignedIn()
+        && isOwner(resource.data.studentId)
+        && request.resource.data.studentId == resource.data.studentId;
+      allow delete: if isOwner(resource.data.studentId);
+    }
+
+    match /session_notes/{noteId} {
+      allow read: if isAdmin() || isApprovedCounselorWithId(resource.data.counselorId);
+      allow create: if isApprovedCounselorWithId(request.resource.data.counselorId)
+        && request.resource.data.appointmentId is string
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.counselorId == request.auth.uid
+        && get(/databases/$(database)/documents/appointments/$(request.resource.data.appointmentId)).data.studentId == request.resource.data.studentId;
+      allow update: if isApprovedCounselorWithId(resource.data.counselorId)
+        && request.resource.data.counselorId == resource.data.counselorId
+        && request.resource.data.studentId == resource.data.studentId
+        && request.resource.data.appointmentId == resource.data.appointmentId
+        && get(/databases/$(database)/documents/appointments/$(resource.data.appointmentId)).data.counselorId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /admin_actions/{actionId} {
+      allow create: if isAdmin()
+        && request.resource.data.adminId == request.auth.uid
+        && request.resource.data.targetUserId is string
+          && request.resource.data.action in [
+            'approve_counselor', 'reject_counselor', 'suspend_counselor',
+            'reactivate_counselor', 'suspend_student', 'reactivate_student'
+          ];
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // Legacy audit collection remains readable during migration.
+    match /adminActions/{actionId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isStudent() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
+    }
+
+    function isCounselor() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'counselor';
+    }
+
+    function isApprovedCounselor() {
+      return isCounselor()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.accountStatus == 'active'
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.verificationStatus == 'approved';
+    }
+
+    function isApprovedCounselorWithId(counselorId) {
+      return isSignedIn() && counselorId == request.auth.uid && isApprovedCounselor();
+    }
+
+    function studentAppointmentUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status', 'reason', 'sessionType', 'startAt', 'endAt', 'studentNotes',
+        'cancellationReason', 'cancelledBy', 'updatedAt'
+      ])
+        && request.resource.data.status in ['pending', 'cancelled', 'rescheduled'];
+    }
+
+    function counselorAppointmentUpdate() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        'status', 'meetingLink', 'location', 'cancellationReason', 'cancelledBy',
+        'startAt', 'endAt', 'updatedAt'
+      ])
+        && (
+          (resource.data.status == 'pending' && request.resource.data.status in ['confirmed', 'rejected'])
+          || (resource.data.status == 'confirmed' && request.resource.data.status in ['cancelled', 'completed', 'no_show'])
+          || (resource.data.status == 'rescheduled' && request.resource.data.status == 'confirmed')
+          || (
+            resource.data.status in ['confirmed', 'rescheduled']
+            && request.resource.data.status == 'rescheduled'
+            && request.resource.data.startAt is timestamp
+            && request.resource.data.endAt is timestamp
+            && request.resource.data.endAt > request.resource.data.startAt
+          )
+        );
+    }
+
+    function messageParticipant() {
+      return request.resource.data.senderId == request.auth.uid
+        && exists(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId))
+        && (
+          get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId)).data.studentId == request.auth.uid
+          || get(/databases/$(database)/documents/conversations/$(request.resource.data.conversationId)).data.counselorId == request.auth.uid
+        );
+    }
+
+    function existingMessageParticipant() {
+      return exists(/databases/$(database)/documents/conversations/$(resource.data.conversationId))
+        && (
+          get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.studentId == request.auth.uid
+          || get(/databases/$(database)/documents/conversations/$(resource.data.conversationId)).data.counselorId == request.auth.uid
+        );
+    }
+  }
+}
