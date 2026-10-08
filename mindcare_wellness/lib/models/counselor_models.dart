@@ -45,11 +45,13 @@ class CounselorAppointment {
           : 'Student #${studentId.length > 6 ? studentId.substring(0, 6) : studentId}');
   DateTime? get startAt => _date(data['startAt'] ?? data['appointmentDate']);
   DateTime? get endAt => _date(data['endAt']);
+  String? get rejectionReason => data['rejectionReason'] as String?;
+  String? get cancellationReason => data['cancellationReason'] as String?;
 
   static DateTime? _date(Object? value) {
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    if (value is String) return DateTime.tryParse(value);
+    if (value is Timestamp) return value.toDate().toLocal();
+    if (value is DateTime) return value.toLocal();
+    if (value is String) return DateTime.tryParse(value)?.toLocal();
     return null;
   }
 }

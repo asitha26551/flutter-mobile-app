@@ -19,7 +19,10 @@ class CounselorService {
   Future<CounselorProfile> getProfile() async {
     final user = await _firestore.collection('users').doc(uid).get();
     final details = await _firestore.collection('counselors').doc(uid).get();
-    return CounselorProfile(user: user.data() ?? const {}, details: details.data() ?? const {});
+    return CounselorProfile(
+      user: user.data() ?? const {},
+      details: details.data() ?? const {},
+    );
   }
 
   Future<void> updateProfile({
@@ -65,18 +68,29 @@ class CounselorService {
       .snapshots()
       .asyncMap((snapshot) async {
         final items = <CounselorAppointment>[];
-        final studentService = StudentService(firestore: _firestore, auth: _auth);
+        final studentService = StudentService(
+          firestore: _firestore,
+          auth: _auth,
+        );
         for (final doc in snapshot.docs) {
           final data = Map<String, dynamic>.from(doc.data());
-          final studentId = (data['studentId'] as String?) ?? (data['userId'] as String?) ?? '';
+          final studentId =
+              (data['studentId'] as String?) ??
+              (data['userId'] as String?) ??
+              '';
           if (studentId.isNotEmpty) {
             try {
               final resolved = await studentService.resolveIdentity(studentId);
-              final student = resolved['student'] as StudentModel? ?? StudentModel(uid: studentId);
+              final student =
+                  resolved['student'] as StudentModel? ??
+                  StudentModel(uid: studentId);
               final fullName = (resolved['fullName'] as String?) ?? '';
-              final displayName = student.counselorDisplayName(fullName: fullName);
+              final displayName = student.counselorDisplayName(
+                fullName: fullName,
+              );
               data['studentAlias'] = displayName;
               data['studentIdentity'] = displayName;
+              data['studentFullName'] = fullName;
             } catch (_) {
               final student = StudentModel(uid: studentId);
               data['studentAlias'] = student.counselorDisplayName();
@@ -96,6 +110,12 @@ class CounselorService {
       );
       await appointmentService.confirmAppointment(id);
       return;
+    }
+
+    if (status == 'rejected') {
+      throw ArgumentError(
+        'Reject appointments with a required reason through AppointmentService.reject.',
+      );
     }
 
     await _firestore.collection('appointments').doc(id).update({

@@ -61,12 +61,14 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
         builder: (context, appointmentSnapshot) {
           final appointments =
               appointmentSnapshot.data ?? const <CounselorAppointment>[];
+          final now = DateTime.now();
           final upcoming =
               appointments
                   .where(
                     (item) =>
                         (item.status == 'pending' ||
-                            item.status == 'confirmed') &&
+                            item.status == 'confirmed' ||
+                            item.status == 'rescheduled') &&
                         (item.startAt?.isAfter(DateTime.now()) ?? false),
                   )
                   .toList()
@@ -76,8 +78,20 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                   ),
                 );
           final today = todayAppointments(appointments);
+          final todayUpcoming =
+              today
+                  .where((item) => item.startAt?.isAfter(now) ?? false)
+                  .toList()
+                ..sort(
+                  (a, b) => (a.startAt ?? DateTime(2100)).compareTo(
+                    b.startAt ?? DateTime(2100),
+                  ),
+                );
           final remaining = today
-              .where((item) => upcoming.isEmpty || item.id != upcoming.first.id)
+              .where(
+                (item) =>
+                    todayUpcoming.isEmpty || item.id != todayUpcoming.first.id,
+              )
               .toList();
           final pendingCount = appointments
               .where((item) => item.status == 'pending')
@@ -114,11 +128,11 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                   const SizedBox(height: 20),
                   const _SectionTitle('Next appointment'),
                   const SizedBox(height: 9),
-                  if (upcoming.isEmpty)
+                  if (todayUpcoming.isEmpty)
                     const _EmptyNextAppointment()
                   else
                     _NextAppointmentCard(
-                      item: upcoming.first,
+                      item: todayUpcoming.first,
                       service: widget.service,
                     ),
                   const SizedBox(height: 22),
@@ -152,7 +166,9 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                       MaterialPageRoute(
                         builder: (_) => Scaffold(
                           backgroundColor: dashboardMint,
-                          body: CounselorCalendarScreen(service: widget.service),
+                          body: CounselorCalendarScreen(
+                            service: widget.service,
+                          ),
                         ),
                       ),
                     ),

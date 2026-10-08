@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/appointment_model.dart';
 import '../../models/counselor_models.dart';
@@ -42,6 +43,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   bool _loadingNote = false;
   StudentModel? _student;
   bool _prioritySaving = false;
+  bool _actionSaving = false;
 
   CounselorAppointment get item => widget.item;
 
@@ -120,6 +122,14 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
             _StudentIdentityCard(item: item, student: _student),
             const SizedBox(height: 12),
             _AppointmentInfoCard(item: item),
+            if (item.status == 'rejected' &&
+                item.rejectionReason?.trim().isNotEmpty == true) ...[
+              const SizedBox(height: 12),
+              _ReasonPanel(
+                title: 'Rejection reason',
+                reason: item.rejectionReason!,
+              ),
+            ],
             const SizedBox(height: 12),
             _ClinicalSummaryCard(
               item: item,
@@ -147,6 +157,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: _SessionActions(
+                sessionType: item.sessionType,
                 onStart: _startSession,
                 onReschedule: _reschedule,
                 onCancel: _cancel,
@@ -253,7 +264,30 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       DateTime.now().difference(item.startAt!).inMinutes >= 15;
 
   Future<void> _startSession() async {
-    if (!_canStart) return;
+    if (!_canStart || _actionSaving) return;
+    if (item.sessionType == 'video') {
+      setState(() => _actionSaving = true);
+      try {
+        final hostUrl = await _appointmentService.getHostLink(item.id);
+        final uri = Uri.tryParse(hostUrl);
+        if (uri == null ||
+            !await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+          throw Exception('Could not open the counselor video link.');
+        }
+      } catch (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unable to start video call: $error')),
+          );
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => _actionSaving = false);
+      }
+      if (!mounted) {
+        return;
+      }
+    }
     setState(() {
       _active = true;
       _sessionStartedAt = DateTime.now();
@@ -307,6 +341,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
             uid: _student?.uid ?? item.studentId,
             studentId: _student?.studentId,
             alias: _student?.alias,
+            isAnonymous: _student?.isAnonymous ?? false,
             faculty: _student?.faculty,
             department: _student?.department,
             degreeProgram: _student?.degreeProgram,
@@ -330,9 +365,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to update student priority.'),
-          ),
+          const SnackBar(content: Text('Unable to update student priority.')),
         );
       }
     } finally {
@@ -362,33 +395,47 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   }
 
   Future<void> _reschedule() async {
-    final base = item.startAt ?? DateTime.now();
-    final date = await showDatePicker(
-      context: context,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDate: base.isBefore(DateTime.now()) ? DateTime.now() : base,
-    );
-    if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(base),
-    );
-    if (time == null) return;
-    final start = DateTime(
-      date.year,
-      date.month,
-      date.day,
-      time.hour,
-      time.minute,
-    );
-    final duration = _duration;
-    await _appointmentService.reschedule(
-      item.id,
-      startAt: start,
-      endAt: start.add(duration),
-    );
-    if (mounted) Navigator.pop(context);
+    if (_actionSaving) return;
+    setState(() => _actionSaving = true);
+    try {
+      final base = item.startAt ?? DateTime.now();
+      final date = await showDatePicker(
+        context: context,
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+        initialDate: base.isBefore(DateTime.now()) ? DateTime.now() : base,
+      );
+      if (date == null || !mounted) {
+        return;
+      }
+      final time = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(base),
+      );
+      if (time == null || !mounted) return;
+      final start = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.minute,
+      );
+      final duration = _duration;
+      await _appointmentService.reschedule(
+        item.id,
+        startAt: start,
+        endAt: start.add(duration),
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to reschedule appointment: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actionSaving = false);
+    }
   }
 
   Future<void> _markNoShow() async {
@@ -397,8 +444,77 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   }
 
   Future<void> _update(String status) async {
-    await _appointmentService.updateCounselorStatus(item.id, status);
-    if (mounted) Navigator.pop(context);
+    if (_actionSaving) return;
+    setState(() => _actionSaving = true);
+    try {
+      if (status == 'rejected') {
+        final rejectionReason = await _requestRejectionReason();
+        if (rejectionReason == null || !mounted) {
+          return;
+        }
+        await _appointmentService.reject(item.id, reason: rejectionReason);
+      } else {
+        await _appointmentService.updateCounselorStatus(item.id, status);
+      }
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to update appointment: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _actionSaving = false);
+    }
+  }
+
+  Future<String?> _requestRejectionReason() async {
+    final controller = TextEditingController();
+    String? errorText;
+    try {
+      return await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: const Text('Reject appointment'),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              maxLines: 3,
+              onChanged: (_) {
+                if (errorText != null) setDialogState(() => errorText = null);
+              },
+              decoration: InputDecoration(
+                labelText: 'Reason',
+                errorText: errorText,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final reason = controller.text.trim();
+                  if (reason.isEmpty) {
+                    setDialogState(
+                      () => errorText = 'Please provide a reason.',
+                    );
+                    return;
+                  }
+                  Navigator.pop(dialogContext, reason);
+                },
+                child: const Text('Reject'),
+              ),
+            ],
+          ),
+        ),
+      );
+    } finally {
+      controller.dispose();
+    }
   }
 
   Future<bool> _confirm(String title, String message) async =>
@@ -568,13 +684,42 @@ class _PendingActions extends StatelessWidget {
   );
 }
 
+class _ReasonPanel extends StatelessWidget {
+  const _ReasonPanel({required this.title, required this.reason});
+  final String title;
+  final String reason;
+
+  @override
+  Widget build(BuildContext context) => _DetailsPanel(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w800,
+            color: dashboardInk,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          reason,
+          style: const TextStyle(color: Colors.black87, height: 1.4),
+        ),
+      ],
+    ),
+  );
+}
+
 class _SessionActions extends StatelessWidget {
   const _SessionActions({
+    required this.sessionType,
     required this.onStart,
     required this.onReschedule,
     required this.onCancel,
     required this.onNoShow,
   });
+  final String sessionType;
   final VoidCallback onStart;
   final VoidCallback onReschedule;
   final VoidCallback onCancel;
@@ -588,7 +733,13 @@ class _SessionActions extends StatelessWidget {
         child: FilledButton.icon(
           onPressed: onStart,
           icon: const Icon(Icons.play_arrow),
-          label: const Text('START SESSION'),
+          label: Text(switch (sessionType) {
+            'video' => 'Start Video Call',
+            'audio' => 'Start Audio Call',
+            'chat' => 'Open Chat Session',
+            'in_person' => 'Start In-Person Session',
+            _ => 'Start Session',
+          }),
           style: FilledButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
             textStyle: const TextStyle(fontWeight: FontWeight.w900),
@@ -775,52 +926,55 @@ class _StudentIdentityCard extends StatelessWidget {
   final StudentModel? student;
 
   @override
-  Widget build(BuildContext context) => _DetailsPanel(
-    child: Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: const BoxDecoration(
-            color: Color(0xFFDDF8E6),
-            shape: BoxShape.circle,
+  Widget build(BuildContext context) {
+    final fullName = item.data['studentFullName'] as String?;
+    final displayName =
+        student?.counselorDisplayName(fullName: fullName) ?? item.studentAlias;
+    return _DetailsPanel(
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: Color(0xFFDDF8E6),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.person_outline, color: dashboardGreen),
           ),
-          child: const Icon(Icons.person_outline, color: dashboardGreen),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                student?.alias?.trim().isNotEmpty == true
-                    ? student!.alias!
-                    : item.studentAlias,
-                style: const TextStyle(
-                  color: dashboardInk,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 3),
-              const Text(
-                'Student account',
-                style: TextStyle(color: Colors.black54, fontSize: 12),
-              ),
-              if (student?.faculty?.isNotEmpty == true)
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  '${student!.faculty}${student!.academicYear?.isNotEmpty == true ? '  •  ${student!.academicYear}' : ''}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.black54, fontSize: 11),
+                  displayName,
+                  style: const TextStyle(
+                    color: dashboardInk,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-            ],
+                const SizedBox(height: 3),
+                const Text(
+                  'Student account',
+                  style: TextStyle(color: Colors.black54, fontSize: 12),
+                ),
+                if (student?.faculty?.isNotEmpty == true)
+                  Text(
+                    '${student!.faculty}${student!.academicYear?.isNotEmpty == true ? '  •  ${student!.academicYear}' : ''}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.black54, fontSize: 11),
+                  ),
+              ],
+            ),
           ),
-        ),
-        const Icon(Icons.more_vert, color: Colors.black38),
-      ],
-    ),
-  );
+          const Icon(Icons.more_vert, color: Colors.black38),
+        ],
+      ),
+    );
+  }
 }
 
 class _AppointmentInfoCard extends StatelessWidget {
@@ -1101,7 +1255,10 @@ class _SessionNoteActionState extends State<_SessionNoteAction> {
 
   @override
   Widget build(BuildContext context) {
-    final appointment = AppointmentModel.fromMap(widget.item.id, widget.item.data);
+    final appointment = AppointmentModel.fromMap(
+      widget.item.id,
+      widget.item.data,
+    );
     return StreamBuilder<List<SessionNoteModel>>(
       stream: _notesStream,
       builder: (context, snapshot) {
