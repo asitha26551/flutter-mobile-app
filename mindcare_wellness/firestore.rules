@@ -150,6 +150,11 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // Zoom host URLs are server-only; clients use the authorized host-link API.
+    match /zoomMeetings/{appointmentId} {
+      allow read, write: if false;
+    }
+
     match /conversations/{conversationId} {
       allow read, update: if isSignedIn() && (
         isAdmin() || resource.data.studentId == request.auth.uid
@@ -268,18 +273,20 @@ service cloud.firestore {
         'status', 'reason', 'sessionType', 'startAt', 'endAt', 'studentNotes',
         'cancellationReason', 'cancelledBy', 'updatedAt'
       ])
-        && request.resource.data.status in ['pending', 'cancelled', 'rescheduled'];
+        && request.resource.data.status in ['pending', 'cancelled', 'rescheduled']
+        && request.resource.data.sessionType == resource.data.sessionType
+        && (request.resource.data.status != 'rescheduled' || resource.data.sessionType != 'video');
     }
 
     function counselorAppointmentUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-        'status', 'meetingLink', 'location', 'cancellationReason', 'cancelledBy',
+        'status', 'location', 'cancellationReason', 'cancelledBy',
         'startAt', 'endAt', 'updatedAt'
       ])
         && (
-          (resource.data.status == 'pending' && request.resource.data.status in ['confirmed', 'rejected'])
+          (resource.data.status == 'pending' && request.resource.data.status == 'cancelled')
           || (resource.data.status == 'confirmed' && request.resource.data.status in ['cancelled', 'completed', 'no_show'])
-          || (resource.data.status == 'rescheduled' && request.resource.data.status == 'confirmed')
+          || (resource.data.status == 'rescheduled' && request.resource.data.status in ['cancelled', 'completed', 'no_show'])
           || (
             resource.data.status in ['confirmed', 'rescheduled']
             && request.resource.data.status == 'rescheduled'

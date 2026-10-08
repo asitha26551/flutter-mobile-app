@@ -7,6 +7,7 @@ import '../../../widgets/common/empty_state.dart';
 import '../../../widgets/common/error_message.dart';
 import '../../../widgets/common/loading.dart';
 import '../counselor_helpers.dart';
+import '../counselor_page_header.dart';
 import '../counselor_theme.dart';
 import '../appointment_details_screen.dart';
 import '../calendar/counselor_calendar_screen.dart';
@@ -17,11 +18,15 @@ class CounselorHomeScreen extends StatefulWidget {
   const CounselorHomeScreen({
     required this.service,
     required this.authService,
+    required this.onSync,
+    required this.syncing,
     super.key,
   });
 
   final CounselorService service;
   final AuthService authService;
+  final Future<void> Function() onSync;
+  final bool syncing;
 
   @override
   State<CounselorHomeScreen> createState() => _CounselorHomeScreenState();
@@ -49,7 +54,7 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
     future: _profileFuture,
     builder: (context, profileSnapshot) {
       if (profileSnapshot.connectionState == ConnectionState.waiting) {
-        return const LoadingWidget();
+        return const LoadingWidget(message: 'Loading your dashboard…');
       }
       if (profileSnapshot.hasError || profileSnapshot.data == null) {
         return const ErrorMessage(
@@ -61,12 +66,14 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
         builder: (context, appointmentSnapshot) {
           final appointments =
               appointmentSnapshot.data ?? const <CounselorAppointment>[];
+          final now = DateTime.now();
           final upcoming =
               appointments
                   .where(
                     (item) =>
                         (item.status == 'pending' ||
-                            item.status == 'confirmed') &&
+                            item.status == 'confirmed' ||
+                            item.status == 'rescheduled') &&
                         (item.startAt?.isAfter(DateTime.now()) ?? false),
                   )
                   .toList()
@@ -76,8 +83,20 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                   ),
                 );
           final today = todayAppointments(appointments);
+          final todayUpcoming =
+              today
+                  .where((item) => item.startAt?.isAfter(now) ?? false)
+                  .toList()
+                ..sort(
+                  (a, b) => (a.startAt ?? DateTime(2100)).compareTo(
+                    b.startAt ?? DateTime(2100),
+                  ),
+                );
           final remaining = today
-              .where((item) => upcoming.isEmpty || item.id != upcoming.first.id)
+              .where(
+                (item) =>
+                    todayUpcoming.isEmpty || item.id != todayUpcoming.first.id,
+              )
               .toList();
           final pendingCount = appointments
               .where((item) => item.status == 'pending')
@@ -89,10 +108,12 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(17, 10, 17, 28),
                 children: [
-                  PortalHeader(
-                    profile: profileSnapshot.data!,
+                  CounselorPageHeader(
+                    title: 'Home',
                     service: widget.service,
                     authService: widget.authService,
+                    onSync: widget.onSync,
+                    syncing: widget.syncing,
                   ),
                   const SizedBox(height: 6),
                   _DateLine(date: DateTime.now()),
@@ -114,11 +135,11 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                   const SizedBox(height: 20),
                   const _SectionTitle('Next appointment'),
                   const SizedBox(height: 9),
-                  if (upcoming.isEmpty)
+                  if (todayUpcoming.isEmpty)
                     const _EmptyNextAppointment()
                   else
                     _NextAppointmentCard(
-                      item: upcoming.first,
+                      item: todayUpcoming.first,
                       service: widget.service,
                     ),
                   const SizedBox(height: 22),
@@ -152,7 +173,12 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                       MaterialPageRoute(
                         builder: (_) => Scaffold(
                           backgroundColor: dashboardMint,
-                          body: CounselorCalendarScreen(service: widget.service),
+                          body: CounselorCalendarScreen(
+                            service: widget.service,
+                            authService: widget.authService,
+                            onSync: widget.onSync,
+                            syncing: widget.syncing,
+                          ),
                         ),
                       ),
                     ),
@@ -161,7 +187,12 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                       MaterialPageRoute(
                         builder: (_) => Scaffold(
                           backgroundColor: dashboardMint,
-                          body: CounselorNotesScreen(service: widget.service),
+                          body: CounselorNotesScreen(
+                            service: widget.service,
+                            authService: widget.authService,
+                            onSync: widget.onSync,
+                            syncing: widget.syncing,
+                          ),
                         ),
                       ),
                     ),
