@@ -1082,15 +1082,28 @@ String _detailSessionType(String value) => switch (value) {
   _ => value,
 };
 
-class _SessionNoteAction extends StatelessWidget {
+class _SessionNoteAction extends StatefulWidget {
   const _SessionNoteAction({required this.item});
   final CounselorAppointment item;
 
   @override
+  State<_SessionNoteAction> createState() => _SessionNoteActionState();
+}
+
+class _SessionNoteActionState extends State<_SessionNoteAction> {
+  late final Stream<List<SessionNoteModel>> _notesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesStream = SessionNoteService().forAppointment(widget.item.id);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final appointment = AppointmentModel.fromMap(item.id, item.data);
+    final appointment = AppointmentModel.fromMap(widget.item.id, widget.item.data);
     return StreamBuilder<List<SessionNoteModel>>(
-      stream: SessionNoteService().forAppointment(item.id),
+      stream: _notesStream,
       builder: (context, snapshot) {
         final notes = [...snapshot.data ?? const <SessionNoteModel>[]]
           ..sort(
@@ -1103,7 +1116,7 @@ class _SessionNoteAction extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => AddSessionNoteScreen(appointment: item),
+                builder: (_) => AddSessionNoteScreen(appointment: widget.item),
               ),
             ),
             icon: const Icon(Icons.note_add_outlined),
@@ -1139,14 +1152,21 @@ class _AppointmentNotes extends StatefulWidget {
 
 class _AppointmentNotesState extends State<_AppointmentNotes> {
   bool expanded = false;
+  late final Stream<List<SessionNoteModel>> _notesStream;
 
   @override
-  Widget build(BuildContext context) => StreamBuilder<List<SessionNoteModel>>(
-    stream: SessionNoteService().forCounselor().map(
+  void initState() {
+    super.initState();
+    _notesStream = SessionNoteService().forCounselor().map(
       (notes) => notes
           .where((note) => note.studentId == widget.item.studentId)
           .toList(),
-    ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => StreamBuilder<List<SessionNoteModel>>(
+    stream: _notesStream,
     builder: (context, snapshot) {
       final notes = [...snapshot.data ?? const <SessionNoteModel>[]]
         ..sort(

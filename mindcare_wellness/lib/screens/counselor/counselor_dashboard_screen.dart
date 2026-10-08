@@ -28,7 +28,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
     body: IndexedStack(
       index: selectedIndex,
       children: [
-        CounselorHomeScreen(service: service),
+        CounselorHomeScreen(service: service, authService: widget.authService),
         CounselorCalendarScreen(service: service),
         CounselorNotesScreen(service: service),
         CounselorReportsScreen(service: service),

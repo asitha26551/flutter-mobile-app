@@ -1,13 +1,50 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/counselor_models.dart';
+import '../../../screens/auth/login_screen.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/counselor_service.dart';
 import '../counselor_helpers.dart';
+import '../counselor_profile_screen.dart';
 import '../counselor_theme.dart';
 
 class PortalHeader extends StatelessWidget {
-  const PortalHeader({required this.profile, super.key});
+  const PortalHeader({
+    required this.profile,
+    required this.service,
+    required this.authService,
+    super.key,
+  });
   final CounselorProfile profile;
+  final CounselorService service;
+  final AuthService authService;
+
+  Future<void> _logout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Log out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+    if (shouldLogout != true) return;
+    await authService.logout();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => LoginScreen(authService: authService)),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -60,15 +97,36 @@ class PortalHeader extends StatelessWidget {
             ],
           ),
         ),
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: const Color(0xFFDDF8E6),
-          backgroundImage: profile.imageUrl == null
-              ? null
-              : NetworkImage(profile.imageUrl!),
-          child: profile.imageUrl == null
-              ? const Icon(Icons.person, color: dashboardGreen, size: 22)
-              : null,
+        PopupMenuButton<String>(
+          tooltip: 'Counselor menu',
+          onSelected: (value) async {
+            if (value == 'profile') {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CounselorProfileScreen(service: service),
+                ),
+              );
+              return;
+            }
+            if (value == 'logout') {
+              await _logout(context);
+            }
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: 'profile', child: Text('Counselor Profile')),
+            PopupMenuItem(value: 'logout', child: Text('Logout')),
+          ],
+          child: CircleAvatar(
+            radius: 20,
+            backgroundColor: const Color(0xFFDDF8E6),
+            backgroundImage: profile.imageUrl == null
+                ? null
+                : NetworkImage(profile.imageUrl!),
+            child: profile.imageUrl == null
+                ? const Icon(Icons.person, color: dashboardGreen, size: 22)
+                : null,
+          ),
         ),
       ],
     ),

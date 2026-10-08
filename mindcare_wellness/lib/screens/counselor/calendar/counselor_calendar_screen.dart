@@ -24,6 +24,8 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
   late DateTime month;
   late DateTime selectedDay;
   final availabilityService = AvailabilityService();
+  late final Stream<List<CounselorAppointment>> _appointmentsStream;
+  late final Stream<List<CounselorAvailabilityModel>> _availabilityStream;
   String selectedStatus = 'confirmed';
 
   @override
@@ -31,6 +33,8 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
     super.initState();
     selectedDay = DateTime.now();
     month = DateTime(selectedDay.year, selectedDay.month);
+    _appointmentsStream = widget.service.appointments();
+    _availabilityStream = availabilityService.forCounselor(availabilityService.uid);
   }
 
   @override
@@ -39,7 +43,7 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
     maxScaleFactor: 1.15,
     child: SafeArea(
       child: StreamBuilder<List<CounselorAppointment>>(
-        stream: widget.service.appointments(),
+        stream: _appointmentsStream,
         builder: (context, appointmentSnapshot) {
           if (appointmentSnapshot.connectionState == ConnectionState.waiting) {
             return const LoadingWidget();
@@ -70,7 +74,7 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
             return item.status == selectedStatus;
           }).toList();
           return StreamBuilder<List<CounselorAvailabilityModel>>(
-            stream: availabilityService.forCounselor(availabilityService.uid),
+            stream: _availabilityStream,
             builder: (context, availabilitySnapshot) {
               final availability = availabilitySnapshot.data ?? const [];
           return ListView(

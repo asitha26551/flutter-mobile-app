@@ -19,8 +19,22 @@ class CounselorNotesScreen extends StatefulWidget {
 
 class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   final _noteService = SessionNoteService();
+  final _searchController = TextEditingController();
+  late final Stream<List<SessionNoteModel>> _notesStream;
   Future<List<SessionNoteEntry>>? _entriesFuture;
   String _entryKey = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _notesStream = _noteService.forCounselor();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<List<SessionNoteEntry>> _loadEntries(List<SessionNoteModel> notes) {
     final key = notes.map((note) => note.id).join('|');
@@ -34,7 +48,7 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   @override
   Widget build(BuildContext context) => SafeArea(
     child: StreamBuilder<List<SessionNoteModel>>(
-      stream: _noteService.forCounselor(),
+      stream: _notesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -57,10 +71,14 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
               return _NotesError(onRetry: () => setState(() {}));
             }
             final allEntries = entrySnapshot.data ?? const [];
+            final query = _searchController.text.trim().toLowerCase();
+            final filteredEntries = allEntries.where(
+              (entry) => query.isEmpty || entry.matchesQuery(query),
+            );
 
             // Group by student — one card per student, latest note first
             final groupedEntries = <String, List<SessionNoteEntry>>{};
-            for (final entry in allEntries) {
+            for (final entry in filteredEntries) {
               final key = entry.note.studentId.isNotEmpty
                   ? entry.note.studentId
                   : entry.studentLabel;
@@ -72,13 +90,41 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
               children: [
                 const _NotesHeader(),
                 const SizedBox(height: 20),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFDCEFE1)),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search student by name or alias',
+                      prefixIcon: const Icon(Icons.search, color: dashboardGreen),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              onPressed: () => _searchController.clear(),
+                              icon: const Icon(Icons.clear),
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                    textInputAction: TextInputAction.search,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(height: 20),
                 if (notes.isEmpty)
                   const EmptyState(
                     message:
                         'No session notes yet\nCompleted counseling session notes will appear here.',
                   )
                 else if (groupedEntries.isEmpty)
-                  const EmptyState(message: 'No notes found.')
+                  const EmptyState(message: 'No matching students')
                 else
                   ...groupedEntries.values.map(
                     (studentEntries) {

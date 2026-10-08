@@ -22,7 +22,45 @@ class StudentService {
     return snapshot.exists ? StudentModel.fromFirestore(snapshot) : null;
   }
 
+  Future<Map<String, dynamic>> resolveIdentity(String studentId) async {
+    final student = await get(studentId) ?? StudentModel(uid: studentId);
+    String fullName = '';
+
+    try {
+      final userSnapshot = await _firestore.collection('users').doc(studentId).get();
+      fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
+    } on FirebaseException catch (_) {
+      fullName = '';
+    } catch (_) {
+      fullName = '';
+    }
+
+    return {
+      'student': student,
+      'fullName': fullName,
+      'displayName': student.counselorDisplayName(fullName: fullName),
+      'searchText': [student.alias ?? '', fullName].join(' '),
+    };
+  }
+
   Future<StudentModel?> mine() => get(uid);
+
+  Future<void> updateAnonymousMode({
+    required String studentId,
+    required bool isAnonymous,
+  }) async {
+    await _firestore.collection('students').doc(studentId).update({
+      'isAnonymous': isAnonymous,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> updateStudent({
+    required String studentId,
+    required Map<String, dynamic> data,
+  }) async {
+    await _firestore.collection('students').doc(studentId).update(data);
+  }
 
   Future<void> updatePriority({
     required String studentId,
