@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/counselor_models.dart';
 import '../models/student_model.dart';
+import 'appointment_service.dart';
 import 'student_service.dart';
 
 class CounselorService {
@@ -87,10 +88,21 @@ class CounselorService {
         return items;
       });
 
-  Future<void> updateAppointment(String id, String status) => _firestore.collection('appointments').doc(id).update({
-    'status': status,
-    'updatedAt': FieldValue.serverTimestamp(),
-  });
+  Future<void> updateAppointment(String id, String status) async {
+    if (status == 'confirmed') {
+      final appointmentService = AppointmentService(
+        firestore: _firestore,
+        auth: _auth,
+      );
+      await appointmentService.confirmAppointment(id);
+      return;
+    }
+
+    await _firestore.collection('appointments').doc(id).update({
+      'status': status,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> conversations() => _firestore
       .collection('conversations')
