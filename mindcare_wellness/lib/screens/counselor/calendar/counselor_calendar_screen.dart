@@ -469,12 +469,12 @@ bool _sameWeekday(String value, DateTime date) =>
 
 bool _hasCalendarMarker(String status) =>
     status == 'confirmed' ||
+    status == 'rescheduled' ||
     status == 'completed' ||
-    status == 'pending' ||
-    status == 'rescheduled';
+    status == 'pending';
 
 Color _calendarMarkerColor(String status) =>
-    status == 'pending' || status == 'rescheduled'
+    status == 'pending'
     ? Colors.orange
     : dashboardGreen;
 
@@ -576,8 +576,8 @@ class _CalendarLegend extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _LegendItem(color: dashboardGreen, label: 'Consults'),
-        _LegendItem(color: Colors.orange, label: 'Pending / reschedule'),
-        _LegendItem(color: Color(0xFF25B6D2), label: 'Open slot'),
+        _LegendItem(color: Colors.orange, label: 'Pending'),
+        _LegendItem(color: Color(0xFF25B6D2), label: 'Open slots'),
       ],
     ),
   );
