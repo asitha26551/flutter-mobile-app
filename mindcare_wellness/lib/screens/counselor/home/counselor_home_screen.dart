@@ -49,7 +49,7 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
     future: _profileFuture,
     builder: (context, profileSnapshot) {
       if (profileSnapshot.connectionState == ConnectionState.waiting) {
-        return const LoadingWidget();
+        return const LoadingWidget(message: 'Loading your dashboard…');
       }
       if (profileSnapshot.hasError || profileSnapshot.data == null) {
         return const ErrorMessage(

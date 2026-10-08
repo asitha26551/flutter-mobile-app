@@ -46,7 +46,7 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
         stream: _appointmentsStream,
         builder: (context, appointmentSnapshot) {
           if (appointmentSnapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingWidget();
+            return const LoadingWidget(message: 'Loading your calendar…');
           }
           if (appointmentSnapshot.hasError) {
             return const ErrorMessage(
@@ -467,6 +467,17 @@ bool _sameDay(DateTime? a, DateTime b) =>
 bool _sameWeekday(String value, DateTime date) =>
   value.trim().toLowerCase() == weekdayName(date.weekday).toLowerCase();
 
+bool _hasCalendarMarker(String status) =>
+    status == 'confirmed' ||
+    status == 'completed' ||
+    status == 'pending' ||
+    status == 'rescheduled';
+
+Color _calendarMarkerColor(String status) =>
+    status == 'pending' || status == 'rescheduled'
+    ? Colors.orange
+    : dashboardGreen;
+
 String _timeRange(CounselorAppointment item) {
   final start = item.startAt;
   final end = item.endAt;
@@ -565,7 +576,7 @@ class _CalendarLegend extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _LegendItem(color: dashboardGreen, label: 'Consults'),
-        _LegendItem(color: Colors.orange, label: 'Reschedule'),
+        _LegendItem(color: Colors.orange, label: 'Pending / reschedule'),
         _LegendItem(color: Color(0xFF25B6D2), label: 'Open slot'),
       ],
     ),
@@ -678,17 +689,16 @@ class _MonthCard extends StatelessWidget {
               final selected = _sameDay(date, selectedDay);
               final markers = <Color>{};
               for (final item in appointments.where(
-                (item) => _sameDay(item.startAt, date),
+                (item) =>
+                    _sameDay(item.startAt, date) &&
+                    _hasCalendarMarker(item.status),
               )) {
-                markers.add(
-                  item.status == 'rejected'
-                      ? const Color(0xFFC62828)
-                      : item.status == 'pending' || item.status == 'rescheduled'
-                      ? Colors.orange
-                      : dashboardGreen,
-                );
+                markers.add(_calendarMarkerColor(item.status));
               }
-              if (availability.any((item) => _sameWeekday(item.dayOfWeek, date))) {
+              if (availability.any(
+                (item) =>
+                    item.isAvailable && _sameWeekday(item.dayOfWeek, date),
+              )) {
                 markers.add(const Color(0xFF25B6D2));
               }
               return InkWell(

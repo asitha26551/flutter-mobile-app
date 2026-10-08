@@ -158,6 +158,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               child: _SessionActions(
                 sessionType: item.sessionType,
+                saving: _actionSaving,
                 onStart: _startSession,
                 onReschedule: _reschedule,
                 onCancel: _cancel,
@@ -397,6 +398,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   Future<void> _reschedule() async {
     if (_actionSaving) return;
     setState(() => _actionSaving = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final base = item.startAt ?? DateTime.now();
       final date = await showDatePicker(
@@ -426,7 +428,12 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
         startAt: start,
         endAt: start.add(duration),
       );
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context, true);
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Appointment rescheduled successfully.')),
+        );
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -446,6 +453,7 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   Future<void> _update(String status) async {
     if (_actionSaving) return;
     setState(() => _actionSaving = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       if (status == 'rejected') {
         final rejectionReason = await _requestRejectionReason();
@@ -456,7 +464,18 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       } else {
         await _appointmentService.updateCounselorStatus(item.id, status);
       }
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context, true);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              status == 'rejected'
+                  ? 'Appointment rejected.'
+                  : 'Appointment updated successfully.',
+            ),
+          ),
+        );
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -469,52 +488,10 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
   }
 
   Future<String?> _requestRejectionReason() async {
-    final controller = TextEditingController();
-    String? errorText;
-    try {
-      return await showDialog<String>(
-        context: context,
-        builder: (dialogContext) => StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: const Text('Reject appointment'),
-            content: TextField(
-              controller: controller,
-              autofocus: true,
-              maxLines: 3,
-              onChanged: (_) {
-                if (errorText != null) setDialogState(() => errorText = null);
-              },
-              decoration: InputDecoration(
-                labelText: 'Reason',
-                errorText: errorText,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final reason = controller.text.trim();
-                  if (reason.isEmpty) {
-                    setDialogState(
-                      () => errorText = 'Please provide a reason.',
-                    );
-                    return;
-                  }
-                  Navigator.pop(dialogContext, reason);
-                },
-                child: const Text('Reject'),
-              ),
-            ],
-          ),
-        ),
-      );
-    } finally {
-      controller.dispose();
-    }
+    return showDialog<String>(
+      context: context,
+      builder: (_) => const _RejectionReasonDialog(),
+    );
   }
 
   Future<bool> _confirm(String title, String message) async =>
@@ -558,6 +535,59 @@ class _AppointmentDetailsScreenState extends State<AppointmentDetailsScreen> {
       ),
     );
   }
+}
+
+class _RejectionReasonDialog extends StatefulWidget {
+  const _RejectionReasonDialog();
+
+  @override
+  State<_RejectionReasonDialog> createState() =>
+      _RejectionReasonDialogState();
+}
+
+class _RejectionReasonDialogState extends State<_RejectionReasonDialog> {
+  final _controller = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final reason = _controller.text.trim();
+    if (reason.isEmpty) {
+      setState(() => _errorText = 'Please provide a reason.');
+      return;
+    }
+    Navigator.pop(context, reason);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Reject appointment'),
+    content: TextField(
+      controller: _controller,
+      autofocus: true,
+      maxLines: 3,
+      onChanged: (_) {
+        if (_errorText != null) setState(() => _errorText = null);
+      },
+      decoration: InputDecoration(
+        labelText: 'Reason',
+        errorText: _errorText,
+        border: const OutlineInputBorder(),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(onPressed: _submit, child: const Text('Reject')),
+    ],
+  );
 }
 
 class _AccessDenied extends StatelessWidget {
@@ -714,12 +744,14 @@ class _ReasonPanel extends StatelessWidget {
 class _SessionActions extends StatelessWidget {
   const _SessionActions({
     required this.sessionType,
+    required this.saving,
     required this.onStart,
     required this.onReschedule,
     required this.onCancel,
     required this.onNoShow,
   });
   final String sessionType;
+  final bool saving;
   final VoidCallback onStart;
   final VoidCallback onReschedule;
   final VoidCallback onCancel;
@@ -731,7 +763,7 @@ class _SessionActions extends StatelessWidget {
       SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: onStart,
+          onPressed: saving ? null : onStart,
           icon: const Icon(Icons.play_arrow),
           label: Text(switch (sessionType) {
             'video' => 'Start Video Call',
@@ -751,15 +783,21 @@ class _SessionActions extends StatelessWidget {
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: onReschedule,
-              icon: const Icon(Icons.schedule),
-              label: const Text('Reschedule'),
+              onPressed: saving ? null : onReschedule,
+              icon: saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.schedule),
+              label: Text(saving ? 'Rescheduling…' : 'Reschedule'),
             ),
           ),
           const SizedBox(width: 9),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: onCancel,
+              onPressed: saving ? null : onCancel,
               icon: const Icon(Icons.event_busy_outlined),
               label: const Text('Cancel'),
             ),
@@ -769,7 +807,7 @@ class _SessionActions extends StatelessWidget {
       if (onNoShow != null) ...[
         const SizedBox(height: 8),
         TextButton.icon(
-          onPressed: onNoShow,
+          onPressed: saving ? null : onNoShow,
           icon: const Icon(Icons.person_off_outlined, size: 16),
           label: const Text('Mark as Student No-Show'),
           style: TextButton.styleFrom(foregroundColor: const Color(0xFFD62828)),

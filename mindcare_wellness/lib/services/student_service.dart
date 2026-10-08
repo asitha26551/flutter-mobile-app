@@ -23,17 +23,20 @@ class StudentService {
   }
 
   Future<Map<String, dynamic>> resolveIdentity(String studentId) async {
-    final student = await get(studentId) ?? StudentModel(uid: studentId);
+    final studentFuture = _firestore.collection('students').doc(studentId).get();
+    final userFuture = _firestore
+        .collection('users')
+        .doc(studentId)
+        .get()
+        .then((snapshot) => snapshot, onError: (Object _) => null);
+    final studentSnapshot = await studentFuture;
+    final student = studentSnapshot.exists
+        ? StudentModel.fromFirestore(studentSnapshot)
+        : StudentModel(uid: studentId);
     String fullName = '';
 
-    try {
-      final userSnapshot = await _firestore.collection('users').doc(studentId).get();
-      fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
-    } on FirebaseException catch (_) {
-      fullName = '';
-    } catch (_) {
-      fullName = '';
-    }
+    final userSnapshot = await userFuture;
+    fullName = (userSnapshot?.data()?['fullName'] as String?)?.trim() ?? '';
 
     return {
       'student': student,

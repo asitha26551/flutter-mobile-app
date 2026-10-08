@@ -17,8 +17,12 @@ class CounselorService {
   String get uid => _auth.currentUser!.uid;
 
   Future<CounselorProfile> getProfile() async {
-    final user = await _firestore.collection('users').doc(uid).get();
-    final details = await _firestore.collection('counselors').doc(uid).get();
+    final snapshots = await Future.wait([
+      _firestore.collection('users').doc(uid).get(),
+      _firestore.collection('counselors').doc(uid).get(),
+    ]);
+    final user = snapshots[0];
+    final details = snapshots[1];
     return CounselorProfile(
       user: user.data() ?? const {},
       details: details.data() ?? const {},
@@ -67,12 +71,12 @@ class CounselorService {
       .where('counselorId', isEqualTo: uid)
       .snapshots()
       .asyncMap((snapshot) async {
-        final items = <CounselorAppointment>[];
         final studentService = StudentService(
           firestore: _firestore,
           auth: _auth,
         );
-        for (final doc in snapshot.docs) {
+        final identityByStudent = <String, Future<Map<String, dynamic>>>{};
+        return Future.wait(snapshot.docs.map((doc) async {
           final data = Map<String, dynamic>.from(doc.data());
           final studentId =
               (data['studentId'] as String?) ??
@@ -80,7 +84,8 @@ class CounselorService {
               '';
           if (studentId.isNotEmpty) {
             try {
-              final resolved = await studentService.resolveIdentity(studentId);
+              final resolved = await (identityByStudent[studentId] ??=
+                  studentService.resolveIdentity(studentId));
               final student =
                   resolved['student'] as StudentModel? ??
                   StudentModel(uid: studentId);
@@ -97,9 +102,8 @@ class CounselorService {
               data['studentIdentity'] = student.counselorDisplayName();
             }
           }
-          items.add(CounselorAppointment(id: doc.id, data: data));
-        }
-        return items;
+          return CounselorAppointment(id: doc.id, data: data);
+        }));
       });
 
   Future<void> updateAppointment(String id, String status) async {
