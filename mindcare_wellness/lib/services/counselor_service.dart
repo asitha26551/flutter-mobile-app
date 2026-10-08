@@ -106,6 +106,13 @@ class CounselorService {
         }));
       });
 
+  Future<void> syncAppointments() async {
+    await _firestore
+        .collection('appointments')
+        .where('counselorId', isEqualTo: uid)
+        .get(const GetOptions(source: Source.server));
+  }
+
   Future<void> updateAppointment(String id, String status) async {
     if (status == 'confirmed') {
       final appointmentService = AppointmentService(

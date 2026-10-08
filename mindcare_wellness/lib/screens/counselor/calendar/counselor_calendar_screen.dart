@@ -2,18 +2,29 @@ import 'package:flutter/material.dart';
 
 import '../../../models/counselor_availability_model.dart';
 import '../../../models/counselor_models.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/availability_service.dart';
 import '../../../services/counselor_service.dart';
 import '../../../widgets/common/error_message.dart';
 import '../../../widgets/common/loading.dart';
 import '../appointment_details_screen.dart';
+import '../counselor_page_header.dart';
 import '../counselor_helpers.dart';
 import '../counselor_theme.dart';
 import 'counselor_availability_screen.dart';
 
 class CounselorCalendarScreen extends StatefulWidget {
-  const CounselorCalendarScreen({required this.service, super.key});
+  const CounselorCalendarScreen({
+    required this.service,
+    required this.authService,
+    required this.onSync,
+    required this.syncing,
+    super.key,
+  });
   final CounselorService service;
+  final AuthService authService;
+  final Future<void> Function() onSync;
+  final bool syncing;
 
   @override
   State<CounselorCalendarScreen> createState() =>
@@ -80,18 +91,24 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 13, 16, 28),
             children: [
-              _CalendarHeading(
-                onAvailability: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => Scaffold(
-                      backgroundColor: dashboardMint,
-                      body: const CounselorAvailabilityScreen(),
-                    ),
-                  ),
+              CounselorPageHeader(
+                title: 'Calendar',
+                service: widget.service,
+                authService: widget.authService,
+                onSync: widget.onSync,
+                syncing: widget.syncing,
+              ),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _openAvailability,
+                  icon: const Icon(Icons.schedule_outlined, size: 18),
+                  label: const Text('Manage availability'),
+                  style: TextButton.styleFrom(foregroundColor: dashboardGreen),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 6),
               _MonthCard(
                 month: month,
                 selectedDay: selectedDay,
@@ -156,6 +173,18 @@ class _CounselorCalendarScreenState extends State<CounselorCalendarScreen> {
     month = DateTime(month.year, month.month + offset);
     selectedDay = DateTime(month.year, month.month, 1);
   });
+
+  Future<void> _openAvailability() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: dashboardMint,
+          body: const CounselorAvailabilityScreen(),
+        ),
+      ),
+    );
+  }
 
 }
 
@@ -500,67 +529,6 @@ String _sessionTypeLabel(String value) => switch (value) {
 
 String _dateLabel(DateTime date) =>
     '${weekdayName(date.weekday).substring(0, 1)}${weekdayName(date.weekday).substring(1).toLowerCase()}, ${date.day} ${monthName(date.month).substring(0, 1)}${monthName(date.month).substring(1).toLowerCase()}';
-
-class _CalendarHeading extends StatelessWidget {
-  const _CalendarHeading({required this.onAvailability});
-  final VoidCallback onAvailability;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(
-          Icons.shield_outlined,
-          color: dashboardGreen,
-          size: 22,
-        ),
-      ),
-      const SizedBox(width: 12),
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'COUNSELOR PORTAL',
-              style: TextStyle(
-                color: dashboardGreen,
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .7,
-              ),
-            ),
-            Text(
-              'Calendar',
-              style: TextStyle(
-                color: dashboardInk,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-      IconButton(
-        onPressed: onAvailability,
-        tooltip: 'Manage working hours',
-        icon: const Icon(Icons.schedule_outlined, color: dashboardGreen),
-      ),
-    ],
-  );
-}
 
 class _CalendarLegend extends StatelessWidget {
   const _CalendarLegend();
