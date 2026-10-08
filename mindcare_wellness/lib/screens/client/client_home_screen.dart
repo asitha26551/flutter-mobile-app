@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../services/auth_service.dart';
 import '../../widgets/auth_widgets.dart';
+import '../student/mood_log_screen.dart';
 
 class ClientHomeScreen extends StatelessWidget {
   const ClientHomeScreen({required this.authService, super.key});
@@ -30,8 +31,9 @@ class ClientHomeScreen extends StatelessWidget {
         children: [
           Text(
             'Your wellbeing matters.',
-            style: Theme.of(context).textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
           ),
           const SizedBox(height: 5),
           const Text(
@@ -39,6 +41,7 @@ class ClientHomeScreen extends StatelessWidget {
             style: TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 24),
+
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -56,32 +59,59 @@ class ClientHomeScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Take a gentle pause today. Small steps count.',
-                    style: TextStyle(fontWeight: FontWeight.w600, height: 1.35),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
           const SizedBox(height: 28),
+
           const Text(
             'How can we help?',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
           ),
+
           const SizedBox(height: 14),
+
           _ActionTile(
             icon: Icons.search_rounded,
             title: 'Find a counselor',
             subtitle: 'Connect with the right professional',
           ),
+
           _ActionTile(
             icon: Icons.calendar_month_rounded,
             title: 'Book a session',
             subtitle: 'Choose a time that works for you',
           ),
+
           _ActionTile(
             icon: Icons.person_outline_rounded,
             title: 'My profile',
             subtitle: 'Manage your personal details',
+          ),
+
+          // TEMPORARY Mood Log tile
+          _ActionTile(
+            icon: Icons.mood_rounded,
+            title: 'Mood Log',
+            subtitle: 'Record how you are feeling today',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MoodLogScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -94,24 +124,35 @@ class _ActionTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 5,
+        ),
         leading: CircleAvatar(
           backgroundColor: mintGreen,
           foregroundColor: primaryGreen,
           child: Icon(icon),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right_rounded),
       ),
