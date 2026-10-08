@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
 import 'theme/app_theme.dart';
-import 'widgets/auth_gate.dart';
+import 'screens/onboarding/mindcare_intro_flow.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +20,7 @@ class MindCareApp extends StatelessWidget {
       title: 'MindCare Wellness',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const AuthGate(),
+      home: const MindCareIntroFlow(),
     );
   }
 }
