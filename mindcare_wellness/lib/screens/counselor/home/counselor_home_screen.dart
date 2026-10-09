@@ -1,60 +1,27 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/counselor_models.dart';
-import '../../../services/auth_service.dart';
 import '../../../services/counselor_service.dart';
 import '../../../widgets/common/empty_state.dart';
 import '../../../widgets/common/error_message.dart';
 import '../../../widgets/common/loading.dart';
 import '../counselor_helpers.dart';
-import '../counselor_page_header.dart';
 import '../counselor_theme.dart';
 import '../appointment_details_screen.dart';
 import '../calendar/counselor_calendar_screen.dart';
 import '../notes/counselor_notes_screen.dart';
 import 'home_widgets.dart';
 
-class CounselorHomeScreen extends StatefulWidget {
-  const CounselorHomeScreen({
-    required this.service,
-    required this.authService,
-    required this.onSync,
-    required this.syncing,
-    super.key,
-  });
-
+class CounselorHomeScreen extends StatelessWidget {
+  const CounselorHomeScreen({required this.service, super.key});
   final CounselorService service;
-  final AuthService authService;
-  final Future<void> Function() onSync;
-  final bool syncing;
-
-  @override
-  State<CounselorHomeScreen> createState() => _CounselorHomeScreenState();
-}
-
-class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
-  late Future<CounselorProfile> _profileFuture;
-  late Stream<List<CounselorAppointment>> _appointmentsStream;
-
-  @override
-  void initState() {
-    super.initState();
-    _profileFuture = widget.service.getProfile();
-    _appointmentsStream = widget.service.appointments();
-  }
-
-  Future<void> _refreshProfile() async {
-    setState(() {
-      _profileFuture = widget.service.getProfile();
-    });
-  }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<CounselorProfile>(
-    future: _profileFuture,
+    future: service.getProfile(),
     builder: (context, profileSnapshot) {
       if (profileSnapshot.connectionState == ConnectionState.waiting) {
-        return const LoadingWidget(message: 'Loading your dashboard…');
+        return const LoadingWidget();
       }
       if (profileSnapshot.hasError || profileSnapshot.data == null) {
         return const ErrorMessage(
@@ -62,18 +29,16 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
         );
       }
       return StreamBuilder<List<CounselorAppointment>>(
-        stream: _appointmentsStream,
+        stream: service.appointments(),
         builder: (context, appointmentSnapshot) {
           final appointments =
               appointmentSnapshot.data ?? const <CounselorAppointment>[];
-          final now = DateTime.now();
           final upcoming =
               appointments
                   .where(
                     (item) =>
                         (item.status == 'pending' ||
-                            item.status == 'confirmed' ||
-                            item.status == 'rescheduled') &&
+                            item.status == 'confirmed') &&
                         (item.startAt?.isAfter(DateTime.now()) ?? false),
                   )
                   .toList()
@@ -83,38 +48,20 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                   ),
                 );
           final today = todayAppointments(appointments);
-          final todayUpcoming =
-              today
-                  .where((item) => item.startAt?.isAfter(now) ?? false)
-                  .toList()
-                ..sort(
-                  (a, b) => (a.startAt ?? DateTime(2100)).compareTo(
-                    b.startAt ?? DateTime(2100),
-                  ),
-                );
           final remaining = today
-              .where(
-                (item) =>
-                    todayUpcoming.isEmpty || item.id != todayUpcoming.first.id,
-              )
+              .where((item) => upcoming.isEmpty || item.id != upcoming.first.id)
               .toList();
           final pendingCount = appointments
               .where((item) => item.status == 'pending')
               .length;
           return SafeArea(
             child: RefreshIndicator(
-              onRefresh: _refreshProfile,
+              onRefresh: service.getProfile,
               color: dashboardGreen,
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(17, 10, 17, 28),
                 children: [
-                  CounselorPageHeader(
-                    title: 'Home',
-                    service: widget.service,
-                    authService: widget.authService,
-                    onSync: widget.onSync,
-                    syncing: widget.syncing,
-                  ),
+                  PortalHeader(profile: profileSnapshot.data!),
                   const SizedBox(height: 6),
                   _DateLine(date: DateTime.now()),
                   const SizedBox(height: 5),
@@ -135,12 +82,12 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                   const SizedBox(height: 20),
                   const _SectionTitle('Next appointment'),
                   const SizedBox(height: 9),
-                  if (todayUpcoming.isEmpty)
+                  if (upcoming.isEmpty)
                     const _EmptyNextAppointment()
                   else
                     _NextAppointmentCard(
-                      item: todayUpcoming.first,
-                      service: widget.service,
+                      item: upcoming.first,
+                      service: service,
                     ),
                   const SizedBox(height: 22),
                   const _SectionTitle('Remaining bookings today'),
@@ -158,7 +105,7 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                           MaterialPageRoute(
                             builder: (_) => AppointmentDetailsScreen(
                               item: item,
-                              service: widget.service,
+                              service: service,
                             ),
                           ),
                         ),
@@ -173,12 +120,7 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                       MaterialPageRoute(
                         builder: (_) => Scaffold(
                           backgroundColor: dashboardMint,
-                          body: CounselorCalendarScreen(
-                            service: widget.service,
-                            authService: widget.authService,
-                            onSync: widget.onSync,
-                            syncing: widget.syncing,
-                          ),
+                          body: CounselorCalendarScreen(service: service),
                         ),
                       ),
                     ),
@@ -187,12 +129,7 @@ class _CounselorHomeScreenState extends State<CounselorHomeScreen> {
                       MaterialPageRoute(
                         builder: (_) => Scaffold(
                           backgroundColor: dashboardMint,
-                          body: CounselorNotesScreen(
-                            service: widget.service,
-                            authService: widget.authService,
-                            onSync: widget.onSync,
-                            syncing: widget.syncing,
-                          ),
+                          body: CounselorNotesScreen(service: service),
                         ),
                       ),
                     ),

@@ -36,7 +36,6 @@ class UserService {
     batch.set(_firestore.collection('students').doc(uid), {
       ...studentData,
       'uid': uid,
-      'isAnonymous': studentData['isAnonymous'] ?? false,
       'priorityLevel': studentData['priorityLevel'] ?? 'normal',
       'authorizedCounselorIds': const <String>[],
       'createdAt': now,

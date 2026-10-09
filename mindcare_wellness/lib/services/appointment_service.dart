@@ -1,38 +1,15 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 
 import '../models/appointment_model.dart';
 
 class AppointmentService {
-  AppointmentService({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-    String? backendBaseUrl,
-  }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _auth = auth ?? FirebaseAuth.instance,
-       _backendBaseUrl = (backendBaseUrl ?? _defaultBackendBaseUrl)
-           .replaceFirst(RegExp(r'/+$'), '');
-
-  static const _configuredBackendBaseUrl = String.fromEnvironment(
-    'MINDCARE_API_BASE_URL',
-  );
-
-  static String get _defaultBackendBaseUrl {
-    if (_configuredBackendBaseUrl.isNotEmpty) return _configuredBackendBaseUrl;
-    // Android emulators reach the host machine through this bridge address.
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000';
-    }
-    return 'http://localhost:3000';
-  }
+  AppointmentService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
-  final String _backendBaseUrl;
 
   String get uid =>
       _auth.currentUser?.uid ?? (throw StateError('You must be signed in.'));
@@ -74,7 +51,6 @@ class AppointmentService {
       'studentNotes': studentNotes,
       'cancellationReason': null,
       'cancelledBy': null,
-      'rejectionReason': null,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
@@ -86,68 +62,13 @@ class AppointmentService {
     return reference.id;
   }
 
-  Future<String?> _getToken() async {
-    final user = _auth.currentUser;
-    if (user == null) throw StateError('You must be signed in.');
-    return user.getIdToken();
-  }
-
-  Future<void> confirmAppointment(String id) async {
-    final token = await _getToken();
-    final uri = Uri.parse('$_backendBaseUrl/appointments/$id/confirm');
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({}),
-    );
-
-    if (response.statusCode >= 400) {
-      throw Exception('Unable to confirm appointment. ${response.body}');
-    }
-  }
-
-  Future<void> accept(String id) => confirmAppointment(id);
-
-  /// Reject an appointment through the trusted backend.
-  /// [reason] must be a non-empty trimmed string.
-  Future<void> reject(String id, {required String reason}) async {
-    final trimmed = reason.trim();
-    if (trimmed.isEmpty) {
-      throw ArgumentError('A rejection reason is required.');
-    }
-    final token = await _getToken();
-    final uri = Uri.parse('$_backendBaseUrl/appointments/$id/reject');
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'rejectionReason': trimmed}),
-    );
-    if (response.statusCode >= 400) {
-      throw Exception('Unable to reject appointment. ${response.body}');
-    }
-  }
-
+  Future<void> accept(String id) => _updateCounselorStatus(id, 'confirmed');
+  Future<void> reject(String id) => _updateCounselorStatus(id, 'rejected');
   Future<void> complete(String id) => _updateCounselorStatus(id, 'completed');
   Future<void> markNoShow(String id) => _updateCounselorStatus(id, 'no_show');
 
-  Future<void> updateCounselorStatus(String id, String status) async {
-    if (status == 'confirmed') {
-      await confirmAppointment(id);
-      return;
-    }
-    if (status == 'rejected') {
-      throw ArgumentError(
-        'A rejection reason is required; call reject with the reason.',
-      );
-    }
-    await _updateCounselorStatus(id, status);
-  }
+  Future<void> updateCounselorStatus(String id, String status) =>
+      _updateCounselorStatus(id, status);
 
   Future<void> _updateCounselorStatus(String id, String status) => _firestore
       .collection('appointments')
@@ -162,58 +83,21 @@ class AppointmentService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-  /// Reschedule an appointment through the trusted backend.
-  /// The backend handles Zoom meeting updates for video appointments.
   Future<void> reschedule(
     String id, {
     required DateTime startAt,
     required DateTime endAt,
-  }) async {
+  }) {
     if (!endAt.isAfter(startAt)) {
       throw ArgumentError(
         'The appointment end time must be after its start time.',
       );
     }
-    final token = await _getToken();
-    final uri = Uri.parse('$_backendBaseUrl/appointments/$id/reschedule');
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'startAt': startAt.toUtc().toIso8601String(),
-        'endAt': endAt.toUtc().toIso8601String(),
-      }),
-    );
-    if (response.statusCode >= 400) {
-      throw Exception('Unable to reschedule appointment. ${response.body}');
-    }
-  }
-
-  /// Retrieve the host/start URL for a video appointment from the trusted backend.
-  /// Only counselors who own the appointment may call this.
-  Future<String> getHostLink(String appointmentId) async {
-    final token = await _getToken();
-    final uri = Uri.parse(
-      '$_backendBaseUrl/appointments/$appointmentId/host-link',
-    );
-    final response = await http.get(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-    );
-    if (response.statusCode >= 400) {
-      throw Exception('Unable to retrieve host link. ${response.body}');
-    }
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
-    final startUrl = body['startUrl'] as String?;
-    if (startUrl == null || startUrl.isEmpty) {
-      throw Exception('Host link not available.');
-    }
-    return startUrl;
+    return _firestore.collection('appointments').doc(id).update({
+      'status': 'rescheduled',
+      'startAt': Timestamp.fromDate(startAt),
+      'endAt': Timestamp.fromDate(endAt),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

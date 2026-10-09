@@ -22,48 +22,7 @@ class StudentService {
     return snapshot.exists ? StudentModel.fromFirestore(snapshot) : null;
   }
 
-  Future<Map<String, dynamic>> resolveIdentity(String studentId) async {
-    final studentFuture = _firestore.collection('students').doc(studentId).get();
-    final userFuture = _firestore
-        .collection('users')
-        .doc(studentId)
-        .get()
-        .then((snapshot) => snapshot, onError: (Object _) => null);
-    final studentSnapshot = await studentFuture;
-    final student = studentSnapshot.exists
-        ? StudentModel.fromFirestore(studentSnapshot)
-        : StudentModel(uid: studentId);
-    String fullName = '';
-
-    final userSnapshot = await userFuture;
-    fullName = (userSnapshot?.data()?['fullName'] as String?)?.trim() ?? '';
-
-    return {
-      'student': student,
-      'fullName': fullName,
-      'displayName': student.counselorDisplayName(fullName: fullName),
-      'searchText': [student.alias ?? '', fullName].join(' '),
-    };
-  }
-
   Future<StudentModel?> mine() => get(uid);
-
-  Future<void> updateAnonymousMode({
-    required String studentId,
-    required bool isAnonymous,
-  }) async {
-    await _firestore.collection('students').doc(studentId).update({
-      'isAnonymous': isAnonymous,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> updateStudent({
-    required String studentId,
-    required Map<String, dynamic> data,
-  }) async {
-    await _firestore.collection('students').doc(studentId).update(data);
-  }
 
   Future<void> updatePriority({
     required String studentId,
