@@ -966,8 +966,9 @@ class _StudentIdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fullName = item.data['studentFullName'] as String?;
-    final displayName =
-        student?.counselorDisplayName(fullName: fullName) ?? item.studentAlias;
+    final displayName = item.studentAlias.isNotEmpty
+        ? item.studentAlias
+        : student?.counselorDisplayName(fullName: fullName) ?? 'Student';
     return _DetailsPanel(
       child: Row(
         children: [

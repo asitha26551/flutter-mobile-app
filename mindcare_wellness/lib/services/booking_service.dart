@@ -68,8 +68,8 @@ class BookingService {
       _effectiveFirestore?.collection('appointments');
 
   /// Reference to the `counselors` collection.
-  CollectionReference<Map<String, dynamic>>? get _counselorsCollection =>
-      _effectiveFirestore?.collection('counselors');
+  CollectionReference<Map<String, dynamic>>? get _publicCounselorsCollection =>
+      _effectiveFirestore?.collection('counselor_public');
 
   // =========================================================================
   // 1. CREATE OPERATIONS
@@ -502,47 +502,43 @@ class BookingService {
     bool onlyConfidentialSupported = false,
   }) async {
     try {
-      final col = _counselorsCollection;
+      final col = _publicCounselorsCollection;
       if (col != null) {
-        final snapshot = await col.get();
-        if (snapshot.docs.isNotEmpty) {
-          final list = <CounselorModel>[];
-          for (final doc in snapshot.docs) {
-            final data = doc.data();
-            String name = data['name'] as String? ?? '';
-            String image = data['image'] as String? ?? '';
-
-            if (name.isEmpty) {
-              try {
-                final userDoc = await _effectiveFirestore
-                    ?.collection('users')
-                    .doc(doc.id)
-                    .get();
-                final userData = userDoc?.data();
-                if (userData != null) {
-                  name = userData['fullName'] as String? ?? 'Counselor';
-                  image = userData['profileImageUrl'] as String? ?? image;
-                }
-              } catch (_) {}
-            }
-
-            final counselor = CounselorModel.fromJson({
-              ...data,
-              'id': doc.id,
-              if (name.isNotEmpty) 'name': name,
-              if (image.isNotEmpty) 'image': image,
-            }, id: doc.id);
-
-            if (!onlyConfidentialSupported || counselor.isConfidentialSupported) {
-              list.add(counselor);
-            }
+        final snapshot = await col
+            .where('verificationStatus', isEqualTo: 'approved')
+            .where('accountStatus', isEqualTo: 'active')
+            .get();
+        final list = <CounselorModel>[];
+        for (final doc in snapshot.docs) {
+          final data = doc.data();
+          final accountStatus = data['accountStatus'] as String?;
+          final verificationStatus = data['verificationStatus'] as String?;
+          if ((accountStatus != null && accountStatus != 'active') ||
+              (verificationStatus != null && verificationStatus != 'approved')) {
+            continue;
           }
+          final counselor = CounselorModel.fromJson({
+            ...data,
+            'id': doc.id,
+            'name': data['fullName'] ?? data['name'] ?? 'Counselor',
+            'image': data['profileImage'] ?? data['profileImageUrl'] ?? '',
+            'title': data['professionalRole'] ?? data['department'] ?? '',
+            'location': data['officeLocation'] ?? data['location'] ?? '',
+            'tags': data['specializations'] ?? data['tags'] ?? const <String>[],
+          }, id: doc.id);
 
-          if (list.isNotEmpty) return list;
+          if (!onlyConfidentialSupported || counselor.isConfidentialSupported) {
+            list.add(counselor);
+          }
         }
+
+        return list;
       }
     } catch (e) {
       debugPrint('BookingService.fetchCounselors error: $e');
+      if (_customFirestore != null || _effectiveFirestore != null) {
+        return const <CounselorModel>[];
+      }
     }
 
     return _defaultCounselors
@@ -559,30 +555,31 @@ class BookingService {
   /// Fetches a counselor by their ID.
   Future<CounselorModel?> getCounselorById(String counselorId) async {
     try {
-      final col = _counselorsCollection;
+      final col = _publicCounselorsCollection;
       if (col != null) {
         final doc = await col.doc(counselorId).get();
-        if (doc.exists && doc.data() != null) {
-          return CounselorModel.fromJson(doc.data(), id: doc.id);
+        if (!doc.exists || doc.data() == null) return null;
+        final data = doc.data()!;
+        if ((data['accountStatus'] as String? ?? '') != 'active' ||
+            (data['verificationStatus'] as String? ?? '') != 'approved') {
+          return null;
         }
+        return CounselorModel.fromJson({
+          ...data,
+          'name': data['fullName'] ?? data['name'] ?? 'Counselor',
+          'image': data['profileImage'] ?? data['profileImageUrl'] ?? '',
+          'title': data['professionalRole'] ?? data['department'] ?? '',
+          'location': data['officeLocation'] ?? data['location'] ?? '',
+          'tags': data['specializations'] ?? data['tags'] ?? const <String>[],
+        }, id: doc.id);
       }
     } catch (e) {
       debugPrint('BookingService.getCounselorById error: $e');
+      if (_customFirestore != null || _effectiveFirestore != null) return null;
     }
 
     for (final c in _defaultCounselors) {
       if (c.id == counselorId) return c;
-    }
-    if (counselorId == 'counselor_sarah') {
-      return const CounselorModel(
-        id: 'counselor_sarah',
-        name: 'Dr. Sarah Perera',
-        title: 'Senior Clinical Psychologist',
-        location: 'Campus Wellness Center, Rm 204',
-        rating: '4.9',
-        isConfidentialSupported: true,
-        availableSlots: ['09:30 AM', '11:00 AM', '02:00 PM', '03:30 PM'],
-      );
     }
     return null;
   }
@@ -592,24 +589,104 @@ class BookingService {
     String counselorId, {
     DateTime? date,
   }) async {
-    List<String> rawSlots = const <String>[];
-
-    final counselor = await getCounselorById(counselorId);
-    if (counselor != null && counselor.availableSlots.isNotEmpty) {
-      rawSlots = counselor.availableSlots;
+    final firestore = _effectiveFirestore;
+    if (firestore == null || date == null) {
+      final counselor = await getCounselorById(counselorId);
+      return counselor?.availableSlots ?? const <String>[];
     }
 
-    if (rawSlots.isEmpty) {
-      rawSlots = const [
-        '09:00 AM - 10:00 AM',
-        '10:30 AM - 11:30 AM',
-        '01:00 PM - 02:00 PM',
-        '02:30 PM - 03:30 PM',
-        '04:00 PM - 05:00 PM',
-      ];
-    }
+    final availability = await firestore
+        .collection('counselor_availability')
+        .where('counselorId', isEqualTo: counselorId)
+        .where('isAvailable', isEqualTo: true)
+        .get();
+    final weekday = _weekdayName(date.weekday).toLowerCase();
+    final windows = availability.docs
+        .map((doc) => doc.data())
+        .where((data) =>
+            (data['dayOfWeek'] as String? ?? '').toLowerCase() == weekday)
+        .toList();
+    if (windows.isEmpty) return const <String>[];
 
-    return rawSlots;
+    // Students may only read their own appointment documents. The counselor
+    // confirms pending requests, so slot discovery uses published working
+    // hours and leaves appointment ownership checks to the counselor flow.
+    final dayStart = DateTime(date.year, date.month, date.day);
+
+    final slots = <String>{};
+    for (final window in windows) {
+      final startMinute = _minutesSinceMidnight(window['startTime'] as String? ?? '');
+      final endMinute = _minutesSinceMidnight(window['endTime'] as String? ?? '');
+      final duration = (window['sessionDuration'] as num?)?.toInt() ?? 45;
+      if (startMinute == null || endMinute == null || duration <= 0) continue;
+      for (var minute = startMinute; minute + duration <= endMinute; minute += duration) {
+        final start = dayStart.add(Duration(minutes: minute));
+        if (start.isBefore(DateTime.now())) continue;
+        slots.add(_formatSlot(start));
+      }
+    }
+    final result = slots.toList()
+      ..sort((a, b) => _minutesSinceMidnight(a)!.compareTo(_minutesSinceMidnight(b)!));
+    return result;
+  }
+
+  Future<int> fetchSlotDuration(
+    String counselorId, {
+    required DateTime date,
+    required String slot,
+  }) async {
+    final firestore = _effectiveFirestore;
+    if (firestore == null) return 45;
+    final slotMinute = _minutesSinceMidnight(slot);
+    if (slotMinute == null) return 45;
+    final weekday = _weekdayName(date.weekday).toLowerCase();
+    final availability = await firestore
+        .collection('counselor_availability')
+        .where('counselorId', isEqualTo: counselorId)
+        .where('isAvailable', isEqualTo: true)
+        .get();
+    for (final doc in availability.docs) {
+      final data = doc.data();
+      if ((data['dayOfWeek'] as String? ?? '').toLowerCase() != weekday) {
+        continue;
+      }
+      final start = _minutesSinceMidnight(data['startTime'] as String? ?? '');
+      final end = _minutesSinceMidnight(data['endTime'] as String? ?? '');
+      final duration = (data['sessionDuration'] as num?)?.toInt() ?? 45;
+      if (start != null && end != null && duration > 0 &&
+          slotMinute >= start && slotMinute + duration <= end &&
+          (slotMinute - start) % duration == 0) {
+        return duration;
+      }
+    }
+    return 45;
+  }
+
+  static String _weekdayName(int weekday) => const [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  ][weekday - 1];
+
+  static int? _minutesSinceMidnight(String value) {
+    final match = RegExp(r'^\s*(\d{1,2}):(\d{2})\s*(AM|PM)?\s*$', caseSensitive: false)
+        .firstMatch(value);
+    if (match == null) return null;
+    var hour = int.tryParse(match.group(1)!);
+    final minute = int.tryParse(match.group(2)!);
+    if (hour == null || minute == null || minute > 59) return null;
+    final period = match.group(3)?.toUpperCase();
+    if (period != null) {
+      if (hour < 1 || hour > 12) return null;
+      if (period == 'AM' && hour == 12) hour = 0;
+      if (period == 'PM' && hour != 12) hour += 12;
+    }
+    if (hour > 23) return null;
+    return hour * 60 + minute;
+  }
+
+  static String _formatSlot(DateTime value) {
+    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '${hour.toString().padLeft(2, '0')}:$minute ${value.hour < 12 ? 'AM' : 'PM'}';
   }
 
   /// Alias for [fetchAvailableSlots].

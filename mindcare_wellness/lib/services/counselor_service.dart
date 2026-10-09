@@ -83,6 +83,7 @@ class CounselorService {
               (data['userId'] as String?) ??
               '';
           if (studentId.isNotEmpty) {
+            final bookingAlias = (data['studentAlias'] as String?)?.trim();
             try {
               final resolved = await (identityByStudent[studentId] ??=
                   studentService.resolveIdentity(studentId));
@@ -90,16 +91,24 @@ class CounselorService {
                   resolved['student'] as StudentModel? ??
                   StudentModel(uid: studentId);
               final fullName = (resolved['fullName'] as String?) ?? '';
-              final displayName = student.counselorDisplayName(
-                fullName: fullName,
-              );
+              final displayName = bookingAlias?.isNotEmpty == true
+                  ? bookingAlias!
+                  : student.counselorDisplayName(fullName: fullName);
               data['studentAlias'] = displayName;
               data['studentIdentity'] = displayName;
-              data['studentFullName'] = fullName;
+              if (bookingAlias?.isNotEmpty == true) {
+                data.remove('studentFullName');
+              } else {
+                data['studentFullName'] = fullName;
+              }
             } catch (_) {
               final student = StudentModel(uid: studentId);
-              data['studentAlias'] = student.counselorDisplayName();
-              data['studentIdentity'] = student.counselorDisplayName();
+              final displayName = bookingAlias?.isNotEmpty == true
+                  ? bookingAlias!
+                  : student.counselorDisplayName();
+              data['studentAlias'] = displayName;
+              data['studentIdentity'] = displayName;
+              data.remove('studentFullName');
             }
           }
           return CounselorAppointment(id: doc.id, data: data);

@@ -58,6 +58,7 @@ class AppointmentService {
     String? reason,
     String? location,
     String? studentNotes,
+    String? studentAlias,
   }) async {
     final reference = _firestore.collection('appointments').doc();
     final batch = _firestore.batch();
@@ -72,6 +73,7 @@ class AppointmentService {
       'meetingLink': null,
       'location': location,
       'studentNotes': studentNotes,
+      'studentAlias': studentAlias?.trim(),
       'cancellationReason': null,
       'cancelledBy': null,
       'rejectionReason': null,
