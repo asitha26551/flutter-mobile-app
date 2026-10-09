@@ -10,7 +10,7 @@ List<CounselorAppointment> todayAppointments(
         date.year == now.year &&
         date.month == now.month &&
         date.day == now.day &&
-        (item.status == 'pending' || item.status == 'confirmed' || item.status == 'rescheduled');
+        (item.status == 'pending' || item.status == 'confirmed');
   }).toList()..sort(
     (a, b) =>
         (a.startAt ?? DateTime(2100)).compareTo(b.startAt ?? DateTime(2100)),
