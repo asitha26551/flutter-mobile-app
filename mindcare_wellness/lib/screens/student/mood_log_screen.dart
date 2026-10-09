@@ -166,15 +166,15 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFFFF2),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFE3FFE8),
+        backgroundColor: const Color(0xFFFFFFFF),
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(
             Icons.arrow_back,
-            color: Color(0xFF0B8F2A),
+            color: Color(0xFF059669),
           ),
          onPressed: () {
   if (widget.onBackHome != null) {
@@ -190,7 +190,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
               ? 'Edit Daily Check In'
               : 'Daily Pulse Check In',
           style: const TextStyle(
-            color: Color(0xFF0B8F2A),
+            color: Color(0xFF059669),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -199,7 +199,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
             padding: EdgeInsets.only(right: 14),
             child: CircleAvatar(
               radius: 16,
-              backgroundColor: Color(0xFF0BA52C),
+              backgroundColor: Color(0xFF059669),
               child: Icon(
                 Icons.person,
                 color: Colors.white,
@@ -229,7 +229,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE9FF83),
+                          color: const Color(0xFFECFDF5),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
@@ -237,7 +237,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                               ? 'EDIT TODAY\'S CHECK-IN'
                               : 'STEP 01 OF 03 : DAILY PULSE',
                           style: const TextStyle(
-                            color: Color(0xFF0B8F2A),
+                            color: Color(0xFF059669),
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                           ),
@@ -246,7 +246,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                       const Text(
                         'DATE: 21 SEP',
                         style: TextStyle(
-                          color: Color(0xFF0B8F2A),
+                          color: Color(0xFF059669),
                           fontSize: 10,
                         ),
                       ),
@@ -258,7 +258,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                   const Text(
                     'MONDAY, 21 SEPTEMBER',
                     style: TextStyle(
-                      color: Color(0xFF0B8F2A),
+                      color: Color(0xFF059669),
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
@@ -271,7 +271,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                         ? 'Update how you are feeling'
                         : 'How are you feeling today?',
                     style: const TextStyle(
-                      color: Color(0xFF0B8F2A),
+                      color: Color(0xFF059669),
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -350,7 +350,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                             const Text(
                               '● STRESS LEVEL ASSESSMENT',
                               style: TextStyle(
-                                color: Color(0xFF0B8F2A),
+                                color: Color(0xFF059669),
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -361,13 +361,13 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                                 vertical: 3,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE9FF83),
+                                color: const Color(0xFFECFDF5),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
                                 'SCALE (1-5)',
                                 style: TextStyle(
-                                  color: Color(0xFF0B8F2A),
+                                  color: Color(0xFF059669),
                                   fontSize: 9,
                                 ),
                               ),
@@ -410,7 +410,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                                     height: 42,
                                     decoration: BoxDecoration(
                                       color: selected
-                                          ? const Color(0xFF08B52E)
+                                          ? const Color(0xFF059669)
                                           : const Color(0xFFF2FAF4),
                                       borderRadius:
                                           BorderRadius.circular(8),
@@ -446,7 +446,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                             Text(
                               '1 = MINIMAL',
                               style: TextStyle(
-                                color: Color(0xFF0B8F2A),
+                                color: Color(0xFF059669),
                                 fontSize: 9,
                               ),
                             ),
@@ -471,7 +471,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                       Text(
                         'CONTEXT & TRIGGERS',
                         style: TextStyle(
-                          color: Color(0xFF0B8F2A),
+                          color: Color(0xFF059669),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -479,7 +479,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                       Text(
                         'OPTIONAL',
                         style: TextStyle(
-                          color: Color(0xFF0B8F2A),
+                          color: Color(0xFF059669),
                           fontSize: 9,
                         ),
                       ),
@@ -521,10 +521,10 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDCFFE7),
+                      color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                        color: const Color(0xFF82D95D),
+                        color: const Color(0xFFA7F3D0),
                       ),
                     ),
                     child: const Row(
@@ -532,7 +532,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                       children: [
                         Icon(
                           Icons.lock_outline,
-                          color: Color(0xFF0B8F2A),
+                          color: Color(0xFF059669),
                           size: 20,
                         ),
                         SizedBox(width: 10),
@@ -540,7 +540,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                           child: Text(
                             'End-to-end encrypted. Logs are strictly visible to you and assigned wellness staff upon explicit appointment request.',
                             style: TextStyle(
-                              color: Color(0xFF0B8F2A),
+                              color: Color(0xFF059669),
                               fontSize: 11,
                             ),
                           ),
@@ -559,7 +559,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                           _isSaving ? null : _saveMood,
                       style: ElevatedButton.styleFrom(
                         backgroundColor:
-                            const Color(0xFF00C92D),
+                            const Color(0xFF059669),
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius:
@@ -605,7 +605,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                       child: const Text(
                         '[ VIEW HISTORICAL MOOD TRENDS ]',
                         style: TextStyle(
-                          color: Color(0xFF0B8F2A),
+                          color: Color(0xFF059669),
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
@@ -650,7 +650,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color: selected
-                  ? const Color(0xFF00B62F)
+                  ? const Color(0xFF059669)
                   : Colors.grey.shade300,
               width: selected ? 2 : 1,
             ),

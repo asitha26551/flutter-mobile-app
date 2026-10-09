@@ -11,7 +11,7 @@ import 'screens/student/student_appointments_screen.dart';
 import 'screens/counselors/counselor_directory_screen.dart';
 import 'screens/dashboard/student_dashboard_screen.dart';
 import 'screens/privacy/privacy_controls_screen.dart';
-import 'screens/student/mood_log_screen.dart';
+import 'screens/student/weekly_wellbeing_screen.dart';
 import 'theme/app_theme.dart';
 import 'screens/onboarding/mindcare_intro_flow.dart';
 
@@ -42,7 +42,7 @@ class MindCareApp extends StatelessWidget {
         '/my-schedule': (context) => StudentAppointmentsScreen(),
         '/privacy': (context) => const PrivacyControlsScreen(),
         '/privacy-settings': (context) => const PrivacyControlsScreen(),
-        '/mood-log': (context) => const MoodLogScreen(),
+        '/mood-log': (context) => WeeklyWellbeingScreen(),
         '/login': (context) => const LoginScreen(),
       },
       onGenerateRoute: (settings) {

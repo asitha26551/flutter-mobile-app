@@ -32,6 +32,12 @@ service cloud.firestore {
           && (request.resource.data.emailVerified == resource.data.emailVerified || request.resource.data.emailVerified == request.auth.token.email_verified)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fullName', 'phoneNumber', 'whatsappNumber', 'alternativePhone', 'profileImageUrl', 'updatedAt', 'emailVerified']));
       allow delete: if isAdmin();
+
+      // A user's privacy settings are stored beneath their own user document.
+      // Parent document permissions do not grant access to this subcollection.
+      match /privacy/{privacySettingsId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /students/{userId} {

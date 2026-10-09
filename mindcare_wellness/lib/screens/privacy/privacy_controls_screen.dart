@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/student_service.dart';
 import '../../services/privacy_service.dart';
 
 /// Screen 2: Privacy & Identity Controls Screen
@@ -21,6 +22,7 @@ class PrivacyControlsScreen extends StatefulWidget {
 
 class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   late final PrivacyService _service;
+  final StudentService _studentService = StudentService();
 
   bool _isLoading = true;
   bool _isSaving = false;
@@ -35,6 +37,8 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   bool _maskStudentId = true;
   bool _allowAnonymousNotes = true;
   bool _biometricLock = false;
+  bool _anonymousMode = false;
+  bool _savingAnonymousMode = false;
 
   static const Color _emeraldGreen = Color(0xFF059669);
   static const Color _darkEmerald = Color(0xFF064E3B);
@@ -52,12 +56,16 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
     setState(() => _isLoading = true);
     try {
       final settings = await _service.getPrivacySettings(widget.initialUid);
+      final student = widget.initialUid == null
+          ? await _studentService.mine()
+          : await _studentService.get(widget.initialUid!);
       if (mounted) {
         setState(() {
           _hideRealName = settings.hideRealName;
           _maskStudentId = settings.maskStudentId;
           _allowAnonymousNotes = settings.allowAnonymousNotes;
           _biometricLock = settings.biometricLock;
+          _anonymousMode = student?.isAnonymous ?? false;
 
           if (settings.currentPseudonym.isNotEmpty) {
             _currentPseudonym = settings.currentPseudonym;
@@ -79,6 +87,30 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _setAnonymousMode(bool enabled) async {
+    if (_savingAnonymousMode) return;
+    setState(() => _savingAnonymousMode = true);
+    try {
+      final student = widget.initialUid == null
+          ? await _studentService.mine()
+          : await _studentService.get(widget.initialUid!);
+      if (student == null) throw StateError('Student profile not found.');
+      await _studentService.updateAnonymousMode(
+        studentId: student.uid,
+        isAnonymous: enabled,
+      );
+      if (mounted) setState(() => _anonymousMode = enabled);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update Anonymous Mode. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingAnonymousMode = false);
     }
   }
 
@@ -610,6 +642,14 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
       ),
       child: Column(
         children: [
+          _buildToggleTile(
+            icon: Icons.visibility_off_outlined,
+            title: 'Anonymous Mode',
+            subtitle: 'Counselors see your alias instead of your profile name.',
+            value: _anonymousMode,
+            onChanged: _setAnonymousMode,
+          ),
+          const Divider(height: 1, indent: 64, endIndent: 16, color: Color(0xFFF1F5F9)),
           _buildToggleTile(
             icon: Icons.badge_outlined,
             title: 'Hide Real Name on Bookings',

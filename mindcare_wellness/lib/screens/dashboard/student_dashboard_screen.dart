@@ -9,7 +9,7 @@ import '../../models/appointment_model.dart';
 import '../booking/book_appointment_screen.dart';
 import '../counselors/counselor_directory_screen.dart';
 import '../privacy/privacy_controls_screen.dart';
-import '../student/mood_log_screen.dart';
+import '../student/weekly_wellbeing_screen.dart';
 import '../student/student_appointments_screen.dart';
 
 /// Screen 1: Student Dashboard Screen
@@ -233,7 +233,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       bookingService: _bookingService,
       privacyService: _privacyService,
     ),
-    MoodLogScreen(
+    WeeklyWellbeingScreen(
       onBackHome: () {
         setState(() {
           _selectedTabIndex = 0;
