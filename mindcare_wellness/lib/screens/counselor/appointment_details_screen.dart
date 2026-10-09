@@ -966,8 +966,9 @@ class _StudentIdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fullName = item.data['studentFullName'] as String?;
-    final displayName =
-        student?.counselorDisplayName(fullName: fullName) ?? item.studentAlias;
+    final displayName = item.studentAlias.isNotEmpty
+        ? item.studentAlias
+        : student?.counselorDisplayName(fullName: fullName) ?? 'Student';
     return _DetailsPanel(
       child: Row(
         children: [
@@ -1164,11 +1165,18 @@ class _DetailsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
+    padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: const Color(0xFFD6EBDD)),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: const Color(0xFFE5EAF0)),
+      boxShadow: const [
+        BoxShadow(
+          color: Color(0x080C2417),
+          blurRadius: 14,
+          offset: Offset(0, 4),
+        ),
+      ],
     ),
     child: child,
   );

@@ -51,7 +51,7 @@ class MoodSavedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F3FF),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -79,7 +79,7 @@ class MoodSavedScreen extends StatelessWidget {
                             const Text(
                               '● FLOW : MOOD_TRACKER',
                               style: TextStyle(
-                                color: Color(0xFF078D25),
+                                color: Color(0xFF059669),
                                 fontSize: 7,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -90,13 +90,13 @@ class MoodSavedScreen extends StatelessWidget {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE7FF75),
+                                color: const Color(0xFFECFDF5),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Text(
                                 'STEP 03 OF 03 : SAVED',
                                 style: TextStyle(
-                                  color: Color(0xFF078D25),
+                                  color: Color(0xFF059669),
                                   fontSize: 7,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -117,7 +117,7 @@ class MoodSavedScreen extends StatelessWidget {
                                   right: index == 2 ? 0 : 5,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF00B62F),
+                                  color: const Color(0xFF059669),
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                               ),
@@ -131,10 +131,10 @@ class MoodSavedScreen extends StatelessWidget {
                           width: 78,
                           height: 78,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE9FF83),
+                            color: const Color(0xFFECFDF5),
                             borderRadius: BorderRadius.circular(22),
                             border: Border.all(
-                              color: const Color(0xFF8BEA38),
+                              color: const Color(0xFFA7F3D0),
                               width: 2,
                             ),
                           ),
@@ -143,7 +143,7 @@ class MoodSavedScreen extends StatelessWidget {
                               width: 48,
                               height: 48,
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00C92D),
+                                color: const Color(0xFF059669),
                                 borderRadius: BorderRadius.circular(13),
                               ),
                               child: const Icon(
@@ -163,13 +163,13 @@ class MoodSavedScreen extends StatelessWidget {
                             vertical: 5,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFFF94),
+                            color: const Color(0xFFECFDF5),
                             borderRadius: BorderRadius.circular(18),
                           ),
                           child: const Text(
                             '✨ Great job checking in today!',
                             style: TextStyle(
-                              color: Color(0xFF078D25),
+                              color: Color(0xFF059669),
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
                             ),
@@ -181,7 +181,7 @@ class MoodSavedScreen extends StatelessWidget {
                         const Text(
                           'Mood Saved',
                           style: TextStyle(
-                            color: Color(0xFF078D25),
+                            color: Color(0xFF059669),
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
@@ -207,7 +207,7 @@ class MoodSavedScreen extends StatelessWidget {
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(15),
                             border: Border.all(
-                              color: const Color(0xFFD9D4F5),
+                              color: const Color(0xFFA7F3D0),
                             ),
                           ),
                           child: Column(
@@ -217,7 +217,7 @@ class MoodSavedScreen extends StatelessWidget {
                               const Text(
                                 '● ENTRY RECORD',
                                 style: TextStyle(
-                                  color: Color(0xFF078D25),
+                                  color: Color(0xFF059669),
                                   fontSize: 7,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -259,7 +259,7 @@ class MoodSavedScreen extends StatelessWidget {
                               const Text(
                                 'NOTE RECORDED',
                                 style: TextStyle(
-                                  color: Color(0xFF078D25),
+                                  color: Color(0xFF059669),
                                   fontSize: 7,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -271,10 +271,10 @@ class MoodSavedScreen extends StatelessWidget {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(11),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE7FFED),
+                                  color: const Color(0xFFECFDF5),
                                   borderRadius: BorderRadius.circular(11),
                                   border: Border.all(
-                                    color: const Color(0xFFB9EEC4),
+                                    color: const Color(0xFFA7F3D0),
                                   ),
                                 ),
                                 child: Text(
@@ -282,7 +282,7 @@ class MoodSavedScreen extends StatelessWidget {
                                       ? 'No context note added.'
                                       : note!,
                                   style: const TextStyle(
-                                    color: Color(0xFF078D25),
+                                    color: Color(0xFF059669),
                                     fontSize: 9,
                                   ),
                                 ),
@@ -294,10 +294,10 @@ class MoodSavedScreen extends StatelessWidget {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFF0FFF3),
+                                  color: const Color(0xFFECFDF5),
                                   borderRadius: BorderRadius.circular(11),
                                   border: Border.all(
-                                    color: const Color(0xFFC6EACC),
+                                    color: const Color(0xFFA7F3D0),
                                   ),
                                 ),
                                 child: const Row(
@@ -306,7 +306,7 @@ class MoodSavedScreen extends StatelessWidget {
                                   children: [
                                     Icon(
                                       Icons.verified_user_outlined,
-                                      color: Color(0xFF078D25),
+                                      color: Color(0xFF059669),
                                       size: 15,
                                     ),
                                     SizedBox(width: 7),
@@ -314,7 +314,7 @@ class MoodSavedScreen extends StatelessWidget {
                                       child: Text(
                                         'Data stored securely in your private wellness record.',
                                         style: TextStyle(
-                                          color: Color(0xFF078D25),
+                                          color: Color(0xFF059669),
                                           fontSize: 8,
                                         ),
                                       ),
@@ -335,7 +335,7 @@ class MoodSavedScreen extends StatelessWidget {
                             onPressed: onViewWeeklyTrend,
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
-                                  const Color(0xFF00C92D),
+                                  const Color(0xFF059669),
                               foregroundColor: Colors.white,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
@@ -361,9 +361,9 @@ class MoodSavedScreen extends StatelessWidget {
                             onPressed: onBackHome,
                             style: OutlinedButton.styleFrom(
                               foregroundColor:
-                                  const Color(0xFF078D25),
+                                  const Color(0xFF059669),
                               side: const BorderSide(
-                                color: Color(0xFF078D25),
+                                color: Color(0xFF059669),
                               ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -386,7 +386,7 @@ class MoodSavedScreen extends StatelessWidget {
                           child: const Text(
                             '[ EDIT TODAY\'S CHECK-IN ]',
                             style: TextStyle(
-                              color: Color(0xFF078D25),
+                              color: Color(0xFF059669),
                               fontSize: 8,
                               fontWeight: FontWeight.bold,
                             ),
@@ -407,7 +407,7 @@ class MoodSavedScreen extends StatelessWidget {
   Widget _topBar() {
     return Container(
       height: 58,
-      color: const Color(0xFFE3FFE8),
+      color: const Color(0xFFFFFFFF),
       child: const Row(
         children: [
           SizedBox(width: 48),
@@ -416,7 +416,7 @@ class MoodSavedScreen extends StatelessWidget {
               child: Text(
                 'Mood Saved',
                 style: TextStyle(
-                  color: Color(0xFF078D25),
+                  color: Color(0xFF059669),
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                 ),
@@ -427,7 +427,7 @@ class MoodSavedScreen extends StatelessWidget {
             padding: EdgeInsets.only(right: 12),
             child: CircleAvatar(
               radius: 16,
-              backgroundColor: Color(0xFF08A92C),
+              backgroundColor: Color(0xFF059669),
               child: Icon(
                 Icons.person,
                 color: Colors.white,
@@ -460,13 +460,13 @@ class MoodSavedScreen extends StatelessWidget {
             vertical: 4,
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFFE5FFEA),
+            color: const Color(0xFFECFDF5),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
             value,
             style: const TextStyle(
-              color: Color(0xFF078D25),
+              color: Color(0xFF059669),
               fontSize: 8,
               fontWeight: FontWeight.w600,
             ),

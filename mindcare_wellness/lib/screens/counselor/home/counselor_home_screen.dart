@@ -695,84 +695,100 @@ class _AppointmentRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
     onTap: onTap,
+    borderRadius: BorderRadius.circular(17),
     child: Container(
-      margin: const EdgeInsets.only(bottom: 9),
-      padding: const EdgeInsets.all(13),
+      margin: const EdgeInsets.only(bottom: 11),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: const Color(0xFFE5EAF0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x080C2417),
+            blurRadius: 14,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 72,
-            child: Text(
-              appointmentTime(item.startAt),
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                color: dashboardGreen,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.studentAlias,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: dashboardInk,
-                  ),
-                ),
-                Text(
-                  item.reason,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Colors.black54),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  item.mood?.isNotEmpty == true
-                      ? 'Mood: ${item.mood}${item.moodScore == null ? '' : ' (${item.moodScore}/10)'}'
-                      : 'Mood not recorded',
-                  style: const TextStyle(fontSize: 10, color: Colors.black54),
-                ),
-                Text(
-                  item.location?.isNotEmpty == true
-                      ? '${item.sessionType} · ${item.location}'
-                      : item.sessionType,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 10, color: Colors.black45),
-                ),
-              ],
-            ),
-          ),
           Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                item.status == 'confirmed'
-                    ? Icons.check_circle_outline
-                    : Icons.schedule,
-                size: 15,
-                color: item.status == 'confirmed'
-                    ? dashboardGreen
-                    : Colors.orange,
-              ),
-              const SizedBox(width: 3),
+              const Icon(Icons.schedule_rounded, size: 16, color: dashboardGreen),
+              const SizedBox(width: 6),
               Text(
-                appointmentStatusLabel(item.status),
+                appointmentTime(item.startAt),
                 style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
+                  color: dashboardGreen,
                 ),
               ),
+              const Spacer(),
+              _StatusBadge(item.status),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Text(
+            item.studentAlias,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: dashboardInk,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            item.reason,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF667085)),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 12,
+            runSpacing: 5,
+            children: [
+              _AppointmentMeta(
+                icon: Icons.medical_services_outlined,
+                text: item.sessionType.replaceAll('_', ' '),
+              ),
+              _AppointmentMeta(
+                icon: Icons.place_outlined,
+                text: item.location?.isNotEmpty == true
+                    ? item.location!
+                    : 'Location to be confirmed',
+              ),
+              if (item.mood?.isNotEmpty == true)
+                _AppointmentMeta(
+                  icon: Icons.mood_outlined,
+                  text: '${item.mood}${item.moodScore == null ? '' : ' · ${item.moodScore}/10'}',
+                ),
             ],
           ),
         ],
       ),
     ),
+  );
+}
+
+class _AppointmentMeta extends StatelessWidget {
+  const _AppointmentMeta({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 14, color: const Color(0xFF667085)),
+      const SizedBox(width: 4),
+      Text(
+        text,
+        style: const TextStyle(fontSize: 11, color: Color(0xFF667085)),
+      ),
+    ],
   );
 }

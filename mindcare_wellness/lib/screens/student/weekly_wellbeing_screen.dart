@@ -19,7 +19,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFFFF2),
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -38,7 +38,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                           ConnectionState.waiting) {
                         return const Center(
                           child: CircularProgressIndicator(
-                            color: Color(0xFF00B72B),
+                            color: Color(0xFF059669),
                           ),
                         );
                       }
@@ -118,7 +118,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                                 Icon(
                                   Icons.info_outline_rounded,
                                   size: 12,
-                                  color: Color(0xFF419B55),
+                                  color: Color(0xFF059669),
                                 ),
                                 SizedBox(width: 5),
                                 Expanded(
@@ -140,9 +140,9 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                                   MainAxisAlignment.spaceBetween,
                               children: [
                                 const Text(
-                                  'Recent Check-Ins',
+                                  'Previous Moods',
                                   style: TextStyle(
-                                    color: Color(0xFF078D25),
+                                    color: Color(0xFF059669),
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -153,14 +153,14 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFFE7FF75),
+                                    color: const Color(0xFFECFDF5),
                                     borderRadius:
                                         BorderRadius.circular(12),
                                   ),
                                   child: const Text(
-                                    'LAST 5 ENTRIES',
+                                  'EDIT ANY ENTRY',
                                     style: TextStyle(
-                                      color: Color(0xFF078D25),
+                                      color: Color(0xFF059669),
                                       fontSize: 7,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -192,14 +192,14 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                                     context,
                                     MaterialPageRoute(
                                      builder: (context) => MoodLogScreen(
-                                     onBackHome: onBackHome,
-                                     ), 
+                                       onBackHome: onBackHome,
+                                     ),
                                     ),
                                   );
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor:
-                                      const Color(0xFF00C92D),
+                                      const Color(0xFF059669),
                                   foregroundColor: Colors.white,
                                   elevation: 0,
                                   shape: RoundedRectangleBorder(
@@ -208,7 +208,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                                   ),
                                 ),
                                 child: const Text(
-                                  '⊕  Check In Today',
+                                  '＋  Add Mood',
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
@@ -226,9 +226,9 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                                 onPressed: () {},
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor:
-                                      const Color(0xFF078D25),
+                                      const Color(0xFF059669),
                                   side: const BorderSide(
-                                    color: Color(0xFF078D25),
+                                    color: Color(0xFF059669),
                                   ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius:
@@ -261,17 +261,15 @@ class WeeklyWellbeingScreen extends StatelessWidget {
   Widget _topBar(BuildContext context) {
     return Container(
       height: 58,
-      color: const Color(0xFFE3FFE8),
+      color: const Color(0xFFFFFFFF),
       child: Row(
         children: [
           IconButton(
             icon: const Icon(
               Icons.arrow_back,
-              color: Color(0xFF078D25),
+              color: Color(0xFF059669),
             ),
-            onPressed: () {
-              Navigator.pop(context);
-            },
+            onPressed: onBackHome ?? () => Navigator.pop(context),
           ),
 
           const Expanded(
@@ -279,7 +277,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
               child: Text(
                 'Weekly Wellbeing',
                 style: TextStyle(
-                  color: Color(0xFF078D25),
+                  color: Color(0xFF059669),
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -291,7 +289,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
             padding: EdgeInsets.only(right: 12),
             child: CircleAvatar(
               radius: 16,
-              backgroundColor: Color(0xFF08A92C),
+              backgroundColor: Color(0xFF059669),
               child: Icon(
                 Icons.person,
                 color: Colors.white,
@@ -314,13 +312,13 @@ class WeeklyWellbeingScreen extends StatelessWidget {
             vertical: 5,
           ),
           decoration: BoxDecoration(
-            color: const Color(0xFFE7FF75),
+            color: const Color(0xFFECFDF5),
             borderRadius: BorderRadius.circular(15),
           ),
           child: const Text(
             '● FLOW 1 : WEEKLY_TREND',
             style: TextStyle(
-              color: Color(0xFF078D25),
+              color: Color(0xFF059669),
               fontSize: 7,
               fontWeight: FontWeight.bold,
             ),
@@ -336,7 +334,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
             color: Colors.white,
             borderRadius: BorderRadius.circular(15),
             border: Border.all(
-              color: const Color(0xFF90D89D),
+              color: const Color(0xFFA7F3D0),
             ),
           ),
           child: const Row(
@@ -344,7 +342,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
               Text(
                 'Last 7 Days',
                 style: TextStyle(
-                  color: Color(0xFF078D25),
+                  color: Color(0xFF059669),
                   fontSize: 8,
                   fontWeight: FontWeight.w600,
                 ),
@@ -353,7 +351,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
               Icon(
                 Icons.keyboard_arrow_down,
                 size: 13,
-                color: Color(0xFF078D25),
+                color: Color(0xFF059669),
               ),
             ],
           ),
@@ -379,7 +377,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(
-          color: const Color(0xFFC9EED0),
+          color: const Color(0xFFA7F3D0),
         ),
       ),
       child: Column(
@@ -396,7 +394,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                   Text(
                     'Your Mood This Week',
                     style: TextStyle(
-                      color: Color(0xFF078D25),
+                      color: Color(0xFF059669),
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -417,13 +415,13 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE7FF75),
+                  color: const Color(0xFFECFDF5),
                   borderRadius:
                       BorderRadius.circular(15),
                 ),
                 child: const Icon(
                   Icons.trending_up_rounded,
-                  color: Color(0xFF078D25),
+                  color: Color(0xFF059669),
                   size: 17,
                 ),
               ),
@@ -435,7 +433,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
           const Text(
             '5 Great',
             style: TextStyle(
-              color: Color(0xFF64B800),
+              color: Color(0xFF059669),
               fontSize: 7,
               fontWeight: FontWeight.bold,
             ),
@@ -525,7 +523,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFC9EED0),
+          color: const Color(0xFFA7F3D0),
         ),
       ),
       child: Column(
@@ -544,7 +542,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
           Text(
             value,
             style: const TextStyle(
-              color: Color(0xFF078D25),
+              color: Color(0xFF059669),
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -558,13 +556,13 @@ class WeeklyWellbeingScreen extends StatelessWidget {
               vertical: 2,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFFE7FF75),
+              color: const Color(0xFFECFDF5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               subtitle,
               style: const TextStyle(
-                color: Color(0xFF078D25),
+                color: Color(0xFF059669),
                 fontSize: 7,
                 fontWeight: FontWeight.w600,
               ),
@@ -589,7 +587,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFFC9EED0),
+          color: const Color(0xFFA7F3D0),
         ),
       ),
       child: Row(
@@ -599,16 +597,16 @@ class WeeklyWellbeingScreen extends StatelessWidget {
             height: 38,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0xFFE7FF75),
+              color: const Color(0xFFECFDF5),
               shape: BoxShape.circle,
               border: Border.all(
-                color: const Color(0xFFB5E830),
+                color: const Color(0xFFA7F3D0),
               ),
             ),
             child: Text(
               entry.moodScore.toStringAsFixed(1),
               style: const TextStyle(
-                color: Color(0xFF078D25),
+                color: Color(0xFF059669),
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
               ),
@@ -643,7 +641,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color:
-                              const Color(0xFFDAF7DE),
+                              const Color(0xFFECFDF5),
                           borderRadius:
                               BorderRadius.circular(7),
                         ),
@@ -651,7 +649,7 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                           _timeText(entry.createdAt!),
                           style: const TextStyle(
                             fontSize: 6,
-                            color: Color(0xFF078D25),
+                            color: Color(0xFF059669),
                           ),
                         ),
                       ),
@@ -687,6 +685,25 @@ class WeeklyWellbeingScreen extends StatelessWidget {
           ),
 
           const SizedBox(width: 5),
+
+          IconButton(
+            tooltip: 'Edit mood entry',
+            icon: const Icon(Icons.edit_outlined, color: Color(0xFF059669), size: 19),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MoodLogScreen(
+                    entryId: entry.id,
+                    initialMoodScore: entry.moodScore,
+                    initialStressLevel: entry.stressLevel,
+                    initialNote: entry.note,
+                    onBackHome: onBackHome,
+                  ),
+                ),
+              );
+            },
+          ),
 
           IconButton(
             tooltip: 'Delete mood entry',
@@ -906,20 +923,20 @@ class _MoodTrendPainter extends CustomPainter {
         size.height - top - bottom;
 
     final gridPaint = Paint()
-      ..color = const Color(0xFFD8F4DE)
+      ..color = const Color(0xFFECFDF5)
       ..strokeWidth = 1;
 
     final linePaint = Paint()
-      ..color = const Color(0xFF05B62B)
+      ..color = const Color(0xFF059669)
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke;
 
     final pointPaint = Paint()
-      ..color = const Color(0xFF05B62B)
+      ..color = const Color(0xFF059669)
       ..style = PaintingStyle.fill;
 
     final fillPaint = Paint()
-      ..color = const Color(0xFF8BE99B).withValues(
+      ..color = const Color(0xFF059669).withValues(
         alpha: 0.18,
       )
       ..style = PaintingStyle.fill;
@@ -954,7 +971,7 @@ class _MoodTrendPainter extends CustomPainter {
         text: labels[i],
         style: const TextStyle(
           fontSize: 7,
-          color: Color(0xFF6D8C73),
+          color: Color(0xFF064E3B),
         ),
       );
 

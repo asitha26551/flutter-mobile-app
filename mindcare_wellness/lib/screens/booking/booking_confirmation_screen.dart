@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../controllers/schedule_controller.dart';
 import '../../models/appointment_model.dart';
 import '../../models/counselor_models.dart';
 import '../../services/booking_service.dart';
+import '../../services/appointment_service.dart';
 import '../../services/privacy_service.dart';
-import 'my_schedule_screen.dart';
+import '../student/student_appointments_screen.dart';
 
 /// Screen 5: Booking Confirmation & Review Screen
 /// Displays verified anonymous status, appointment parameters, active pseudonym badge,
 /// passcode with "Copy Code" button, confidentiality rules checklist,
-/// and full-width Emerald Green "Confirm Booking" action saving to Firestore.
+/// and a review action that submits the request to the counselor for approval.
 class BookingConfirmationScreen extends StatefulWidget {
   const BookingConfirmationScreen({
     this.appointment,
     this.booking,
     this.counselor,
+    this.pseudonym,
+    this.passcode,
     this.bookingService,
+    this.appointmentService,
     this.privacyService,
     super.key,
   }) : assert(appointment != null || booking != null, 'Either appointment or booking must be provided');
@@ -25,7 +28,10 @@ class BookingConfirmationScreen extends StatefulWidget {
   final AppointmentModel? appointment;
   final AppointmentModel? booking;
   final CounselorModel? counselor;
+  final String? pseudonym;
+  final String? passcode;
   final BookingService? bookingService;
+  final AppointmentService? appointmentService;
   final PrivacyService? privacyService;
 
   AppointmentModel get effectiveAppointment => (appointment ?? booking)!;
@@ -37,6 +43,7 @@ class BookingConfirmationScreen extends StatefulWidget {
 
 class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   late final BookingService _bookingService;
+  late final AppointmentService _appointmentService;
   late final PrivacyService _privacyService;
 
   bool _isConfirming = false;
@@ -58,6 +65,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   void initState() {
     super.initState();
     _bookingService = widget.bookingService ?? BookingService.defaultInstance;
+    _appointmentService = widget.appointmentService ?? AppointmentService();
     _privacyService = widget.privacyService ?? PrivacyService.defaultInstance;
     _resolvedCounselor = widget.counselor;
     _resolveCounselorIfNeeded();
@@ -75,14 +83,13 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
   }
 
   String get _effectivePseudonym {
-    final sid = widget.effectiveAppointment.studentId.trim();
-    if (sid.isNotEmpty && !sid.contains('@')) {
-      return sid;
-    }
-    return 'SilentPanda42';
+    final value = widget.pseudonym?.trim();
+    return value?.isNotEmpty == true ? value! : 'Private student';
   }
 
   String get _effectivePasscode {
+    final supplied = widget.passcode?.trim();
+    if (supplied?.isNotEmpty == true) return supplied!;
     final notes = widget.effectiveAppointment.studentNotes ?? '';
     final match = RegExp(r'Passcode:\s*([A-Za-z0-9\-]+)', caseSensitive: false)
         .firstMatch(notes);
@@ -104,20 +111,21 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     setState(() => _isConfirming = true);
 
     try {
-      final existingNotes = widget.effectiveAppointment.studentNotes ?? '';
-      final updatedNotes = existingNotes.contains('Passcode:')
-          ? existingNotes
-          : (existingNotes.isNotEmpty
-              ? '$existingNotes | Passcode: $_effectivePasscode'
-              : 'Passcode: $_effectivePasscode');
-
       final toSave = widget.effectiveAppointment.copyWith(
-        studentId: _effectivePseudonym,
-        studentNotes: updatedNotes,
-        status: 'confirmed',
+        studentId: _appointmentService.uid,
+        status: 'pending',
       );
 
-      final saved = await _bookingService.createAppointment(toSave);
+      final id = await _appointmentService.create(
+        counselorId: toSave.counselorId,
+        startAt: toSave.startAt!,
+        endAt: toSave.endAt!,
+        sessionType: toSave.sessionType,
+        reason: toSave.reason,
+        location: toSave.location,
+        studentAlias: _effectivePseudonym,
+      );
+      final saved = toSave.copyWith(id: id);
 
       // Persist active pseudonym & passcode to privacy settings
       try {
@@ -139,7 +147,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Anonymous booking confirmed successfully!'),
+            content: Text('Appointment request sent to the counselor.'),
             backgroundColor: _emeraldGreen,
             behavior: SnackBarBehavior.floating,
           ),
@@ -220,7 +228,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ),
             ),
 
-            // 6. Full-width Emerald Green "Confirm Booking" button
+            // Full-width action submits a pending appointment request.
             _buildBottomActionBar(),
           ],
         ),
@@ -704,7 +712,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
     );
   }
 
-  /// 6. Full-width Emerald Green button: "Confirm Booking"
+  /// Submit the appointment request for counselor review.
   Widget _buildBottomActionBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
@@ -754,7 +762,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   children: [
                     Icon(Icons.check_circle_rounded, size: 20),
                     SizedBox(width: 8),
-                    Text('Confirm Booking'),
+                    Text('Send Appointment Request'),
                   ],
                 ),
         ),
@@ -796,7 +804,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ),
               const SizedBox(height: 24),
               const Text(
-                'Booking Confirmed!',
+                'Request Sent!',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -805,7 +813,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
               ),
               const SizedBox(height: 10),
               const Text(
-                'Your session has been securely booked under your confidential pseudonym.',
+                'Your appointment request was sent securely to your counselor. They will review and confirm the time.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
@@ -854,7 +862,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Keep your passcode handy to enter your session securely.',
+                        'Keep your privacy passcode somewhere safe.',
                         style: TextStyle(
                           fontSize: 12,
                           color: _darkEmerald,
@@ -874,11 +882,7 @@ class _BookingConfirmationScreenState extends State<BookingConfirmationScreen> {
                   onPressed: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => MyScheduleScreen(
-                          bookingService: _bookingService,
-                          privacyService: _privacyService,
-                          initialFilter: ScheduleFilter.upcoming,
-                        ),
+                        builder: (_) => StudentAppointmentsScreen(),
                       ),
                     );
                   },

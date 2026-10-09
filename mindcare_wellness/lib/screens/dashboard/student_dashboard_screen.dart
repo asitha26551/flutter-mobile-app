@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 
-import '../../controllers/schedule_controller.dart';
 import '../../models/counselor_models.dart';
 import '../../services/auth_service.dart';
 import '../../services/booking_service.dart';
 import '../../services/privacy_service.dart';
+import '../../services/appointment_service.dart';
+import '../../models/appointment_model.dart';
 import '../booking/book_appointment_screen.dart';
-import '../booking/my_schedule_screen.dart';
 import '../counselors/counselor_directory_screen.dart';
 import '../privacy/privacy_controls_screen.dart';
-import '../student/mood_log_screen.dart';
+import '../student/weekly_wellbeing_screen.dart';
+import '../student/student_appointments_screen.dart';
 
 /// Screen 1: Student Dashboard Screen
 /// Features a "Privacy Mode: Active" status indicator, interactive mood emoji selector,
@@ -20,12 +21,14 @@ class StudentDashboardScreen extends StatefulWidget {
     this.authService,
     this.bookingService,
     this.privacyService,
+    this.appointmentService,
     super.key,
   });
 
   final AuthService? authService;
   final BookingService? bookingService;
   final PrivacyService? privacyService;
+  final AppointmentService? appointmentService;
 
   @override
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();
@@ -35,7 +38,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   AuthService? _authService;
   late final BookingService _bookingService;
   late final PrivacyService _privacyService;
-  late final ScheduleController _scheduleController;
+  late final AppointmentService _appointmentService;
+  late final Stream<List<AppointmentModel>> _appointmentsStream;
 
   int _selectedTabIndex = 0;
 
@@ -68,17 +72,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     _authService = widget.authService;
     _bookingService = widget.bookingService ?? BookingService.defaultInstance;
     _privacyService = widget.privacyService ?? PrivacyService.defaultInstance;
-    _scheduleController = ScheduleController(
-      bookingService: _bookingService,
-      privacyService: _privacyService,
-    )..initialize();
-
+    _appointmentService = widget.appointmentService ?? AppointmentService();
+    _appointmentsStream = _appointmentService.forStudent();
     _loadData();
   }
 
   @override
   void dispose() {
-    _scheduleController.dispose();
     super.dispose();
   }
 
@@ -106,7 +106,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           }
           _isLoadingCounselors = false;
         });
-        _scheduleController.refresh();
       }
     } catch (_) {
       if (mounted) {
@@ -150,12 +149,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           counselor: counselor,
           bookingService: _bookingService,
           privacyService: _privacyService,
+          appointmentService: _appointmentService,
         ),
       ),
     );
     if (mounted) {
       _loadData();
-      _scheduleController.refresh();
     }
   }
 
@@ -234,7 +233,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       bookingService: _bookingService,
       privacyService: _privacyService,
     ),
-    MoodLogScreen(
+    WeeklyWellbeingScreen(
       onBackHome: () {
         setState(() {
           _selectedTabIndex = 0;
@@ -278,7 +277,7 @@ bottomNavigationBar: _buildBottomNavigationBar(),
             ),
             const SizedBox(width: 4),
             const Text(
-              'Privacy Mode: Active',
+              ' : Active',
               style: TextStyle(
                 color: _darkEmerald,
                 fontSize: 11.5,
@@ -300,6 +299,8 @@ bottomNavigationBar: _buildBottomNavigationBar(),
         children: [
           // Hero Greeting Card with active pseudonym
           _buildGreetingBanner(),
+          const SizedBox(height: 20),
+          _buildAppointmentSummary(),
           const SizedBox(height: 20),
 
           // "How are you feeling today?" mood emoji selector
@@ -325,6 +326,56 @@ bottomNavigationBar: _buildBottomNavigationBar(),
       ),
     );
   }
+
+  Widget _buildAppointmentSummary() => StreamBuilder<List<AppointmentModel>>(
+    stream: _appointmentsStream,
+    builder: (context, snapshot) {
+      if (snapshot.hasError) {
+        return const _AppointmentSummaryCard(
+          title: 'Appointments unavailable',
+          detail: 'We could not load your appointment information.',
+          icon: Icons.event_busy_outlined,
+        );
+      }
+      if (!snapshot.hasData) {
+        return const _AppointmentSummaryCard(
+          title: 'Loading appointments',
+          detail: 'Checking your latest appointment requests…',
+          icon: Icons.event_outlined,
+        );
+      }
+
+      final upcoming = snapshot.data!
+          .where((item) =>
+              (item.status == 'pending' ||
+                  item.status == 'confirmed' ||
+                  item.status == 'rescheduled') &&
+              (item.startAt?.isAfter(DateTime.now()) ?? false))
+          .toList()
+        ..sort((a, b) => a.startAt!.compareTo(b.startAt!));
+      if (upcoming.isEmpty) {
+        return _AppointmentSummaryCard(
+          title: 'No upcoming appointments',
+          detail: 'Your appointment requests and sessions will appear here.',
+          icon: Icons.event_available_outlined,
+          onTap: () => setState(() => _selectedTabIndex = 2),
+        );
+      }
+
+      final next = upcoming.first;
+      final start = next.startAt!;
+      final date = '${start.day}/${start.month}/${start.year} · '
+          '${TimeOfDay.fromDateTime(start).format(context)}';
+      return _AppointmentSummaryCard(
+        title: next.status == 'pending' ? 'Request awaiting confirmation' : 'Next appointment',
+        detail: '${next.sessionType.replaceAll('_', ' ')} · $date',
+        icon: next.status == 'pending'
+            ? Icons.hourglass_top_rounded
+            : Icons.event_available_outlined,
+        onTap: () => setState(() => _selectedTabIndex = 1),
+      );
+    },
+  );
 
   Widget _buildGreetingBanner() {
     return Container(
@@ -762,12 +813,7 @@ bottomNavigationBar: _buildBottomNavigationBar(),
 
   /// Schedule View tab content with full CRUD and anonymity indicators
   Widget _buildScheduleView() {
-    return MyScheduleScreen(
-      scheduleController: _scheduleController,
-      bookingService: _bookingService,
-      privacyService: _privacyService,
-      isEmbedded: true,
-    );
+    return StudentAppointmentsScreen(service: _appointmentService);
   }
 
   Widget _buildSectionHeader(
@@ -845,9 +891,6 @@ bottomNavigationBar: _buildBottomNavigationBar(),
       child: NavigationBar(
         selectedIndex: _selectedTabIndex,
         onDestinationSelected: (index) {
-          if (index == 1) {
-            _scheduleController.refresh();
-          }
           setState(() {
             _selectedTabIndex = index;
           });
@@ -888,4 +931,65 @@ class _MoodItem {
   const _MoodItem(this.emoji, this.label);
   final String emoji;
   final String label;
+}
+
+class _AppointmentSummaryCard extends StatelessWidget {
+  const _AppointmentSummaryCard({
+    required this.title,
+    required this.detail,
+    required this.icon,
+    this.onTap,
+  });
+
+  final String title;
+  final String detail;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  static const Color _green = Color(0xFF059669);
+  static const Color _mint = Color(0xFFECFDF5);
+
+  @override
+  Widget build(BuildContext context) => Card(
+    margin: EdgeInsets.zero,
+    color: Colors.white,
+    elevation: 0,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(16),
+      side: const BorderSide(color: Color(0xFFE2E8F0)),
+    ),
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: const BoxDecoration(
+                color: _mint,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: _green),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text(detail, style: const TextStyle(color: Color(0xFF64748B))),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              const Icon(Icons.chevron_right_rounded, color: Color(0xFF64748B)),
+          ],
+        ),
+      ),
+    ),
+  );
 }

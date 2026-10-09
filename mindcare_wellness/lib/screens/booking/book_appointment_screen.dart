@@ -4,6 +4,7 @@ import '../../controllers/schedule_controller.dart';
 import '../../models/appointment_model.dart';
 import '../../models/counselor_models.dart';
 import '../../services/booking_service.dart';
+import '../../services/appointment_service.dart';
 import '../../services/privacy_service.dart';
 import 'booking_confirmation_screen.dart';
 
@@ -17,6 +18,7 @@ class BookAppointmentScreen extends StatefulWidget {
     this.existingAppointment,
     this.existingBooking,
     this.bookingService,
+    this.appointmentService,
     this.privacyService,
     super.key,
   });
@@ -25,6 +27,7 @@ class BookAppointmentScreen extends StatefulWidget {
   final AppointmentModel? existingAppointment;
   final AppointmentModel? existingBooking;
   final BookingService? bookingService;
+  final AppointmentService? appointmentService;
   final PrivacyService? privacyService;
 
   AppointmentModel? get effectiveExisting =>
@@ -88,7 +91,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
 
     final existing = widget.effectiveExisting;
     if (existing != null) {
-      _selectedFormat = existing.sessionType;
+      _selectedFormat = _formatLabel(existing.sessionType);
       if (existing.startAt != null) {
         _selectedDate = DateTime(
           existing.startAt!.year,
@@ -145,19 +148,7 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          final fallbackSlots = widget.counselor.availableSlots.isNotEmpty
-              ? List<String>.from(widget.counselor.availableSlots)
-              : [
-                  '09:30 AM',
-                  '11:00 AM',
-                  '02:00 PM',
-                  '03:30 PM',
-                ];
-          final slot = _selectedSlot;
-          if (_isEditing && slot != null && !fallbackSlots.contains(slot)) {
-            fallbackSlots.insert(0, slot);
-          }
-          _availableSlots = fallbackSlots;
+          _availableSlots = <String>[];
           _isSlotsLoading = false;
         });
       }
@@ -184,12 +175,17 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     if (_isEditing) {
       setState(() => _isSaving = true);
       try {
+        final duration = await _bookingService.fetchSlotDuration(
+          _selectedCounselor.id,
+          date: _selectedDate,
+          slot: _selectedSlot!,
+        );
         final parsedStart =
             ScheduleController.parseDateTimeSlot(_selectedDate, _selectedSlot!);
         final updated = widget.effectiveExisting!.copyWith(
-          sessionType: _selectedFormat,
+          sessionType: _storedSessionType(_selectedFormat),
           startAt: parsedStart,
-          endAt: parsedStart.add(const Duration(minutes: 50)),
+          endAt: parsedStart.add(Duration(minutes: duration)),
           reason: _selectedReason,
         );
         await _bookingService.updateAppointment(updated);
@@ -222,23 +218,42 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     // New Booking Flow
     final pseudonym = _privacyService.createPseudonym();
     final passcode = _privacyService.createPasscode();
+    setState(() => _isSaving = true);
+    late final int duration;
+    try {
+      duration = await _bookingService.fetchSlotDuration(
+        _selectedCounselor.id,
+        date: _selectedDate,
+        slot: _selectedSlot!,
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not verify the session duration: $error')),
+        );
+      }
+      return;
+    }
+    if (mounted) setState(() => _isSaving = false);
     final parsedStart =
         ScheduleController.parseDateTimeSlot(_selectedDate, _selectedSlot!);
-    final endAt = parsedStart.add(const Duration(minutes: 50));
+    final endAt = parsedStart.add(Duration(minutes: duration));
 
     final appointment = AppointmentModel(
       id: '',
-      studentId: _isAnonymousMode
-          ? pseudonym
-          : (_bookingService.currentUid ?? 'student_user'),
+      // Keep the authenticated UID as the database identity. The counselor
+      // workflow queries appointments by this field; the alias remains a UI
+      // privacy setting and is resolved by CounselorService.
+      studentId: _bookingService.currentUid ?? '',
       counselorId: _selectedCounselor.id,
       startAt: parsedStart,
       endAt: endAt,
-      sessionType: _selectedFormat,
-      status: 'confirmed',
+      sessionType: _storedSessionType(_selectedFormat),
+      status: 'pending',
       reason: _selectedReason,
       location: _selectedCounselor.displayLocation,
-      studentNotes: _isAnonymousMode ? 'Passcode: $passcode' : null,
+      studentNotes: null,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -250,12 +265,30 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
         builder: (context) => BookingConfirmationScreen(
           appointment: appointment,
           counselor: _selectedCounselor,
+          pseudonym: pseudonym,
+          passcode: passcode,
           bookingService: _bookingService,
+          appointmentService: widget.appointmentService,
           privacyService: _privacyService,
         ),
       ),
     );
   }
+
+  String _storedSessionType(String label) => switch (label) {
+    'Text Chat' || 'chat' => 'chat',
+    'Audio Call' || 'audio' => 'audio',
+    'In-Person' || 'in_person' => 'in_person',
+    _ => 'video',
+  };
+
+  String _formatLabel(String value) => switch (value.toLowerCase()) {
+    'chat' || 'text chat' => 'Text Chat',
+    'audio' || 'audio call' => 'Audio Call',
+    'in_person' || 'in-person' => 'In-Person',
+    'video' || 'video call' => 'Video Call',
+    _ => 'Video Call',
+  };
 
   @override
   Widget build(BuildContext context) {

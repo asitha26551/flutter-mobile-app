@@ -76,35 +76,49 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
         ),
       ],
     ),
-    bottomNavigationBar: NavigationBar(
-      selectedIndex: selectedIndex,
-      onDestinationSelected: (index) => setState(() => selectedIndex = index),
-      height: 70,
-      backgroundColor: Colors.white,
-      indicatorColor: Colors.transparent,
-      labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-      destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.home_outlined),
-          selectedIcon: Icon(Icons.home),
-          label: 'Home',
+    bottomNavigationBar: Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Color(0xFFE2E8F0)),
         ),
-        NavigationDestination(
-          icon: Icon(Icons.calendar_month_outlined),
-          selectedIcon: Icon(Icons.calendar_month),
-          label: 'Calendar',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.sticky_note_2_outlined),
-          selectedIcon: Icon(Icons.sticky_note_2),
-          label: 'Notes',
-        ),
-        NavigationDestination(
-          icon: Icon(Icons.bar_chart_outlined),
-          selectedIcon: Icon(Icons.bar_chart),
-          label: 'Reports',
-        ),
-      ],
+      ),
+      child: NavigationBar(
+        selectedIndex: selectedIndex,
+        onDestinationSelected: (index) =>
+            setState(() => selectedIndex = index),
+        backgroundColor: Colors.white,
+        indicatorColor: const Color(0xFFECFDF5),
+        surfaceTintColor: Colors.transparent,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded, color: Color(0xFF059669)),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(
+              Icons.calendar_month_rounded,
+              color: Color(0xFF059669),
+            ),
+            label: 'Calendar',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.sticky_note_2_outlined),
+            selectedIcon: Icon(
+              Icons.sticky_note_2_rounded,
+              color: Color(0xFF059669),
+            ),
+            label: 'Notes',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart_rounded, color: Color(0xFF059669)),
+            label: 'Reports',
+          ),
+        ],
+      ),
     ),
   );
 }
