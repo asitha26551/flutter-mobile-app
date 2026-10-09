@@ -21,10 +21,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   final _studentId = TextEditingController();
+  final _alias = TextEditingController();
   final _faculty = TextEditingController();
   final _degree = TextEditingController();
   final _department = TextEditingController();
   final _intake = TextEditingController();
+  final _batch = TextEditingController();
   final _phone = TextEditingController();
   final _whatsapp = TextEditingController();
   final _alternativePhone = TextEditingController();
@@ -82,10 +84,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _password,
     _confirm,
     _studentId,
+    _alias,
     _faculty,
     _degree,
     _department,
     _intake,
+    _batch,
     _phone,
     _whatsapp,
     _alternativePhone,
@@ -111,18 +115,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   String? _phoneValidator(String? value, {bool required = true}) {
     if (!required && (value == null || value.trim().isEmpty)) return null;
-    if (value == null || value.trim().isEmpty)
+    if (value == null || value.trim().isEmpty) {
       return 'Phone number is required';
-    if (!RegExp(r'^\+?[0-9 ()-]{7,20}$').hasMatch(value.trim()))
+    }
+    if (!RegExp(r'^\+?[0-9 ()-]{7,20}$').hasMatch(value.trim())) {
       return 'Enter a valid phone number';
+    }
     return null;
   }
 
   String? _numberValidator(String? value) {
-    if (value == null || value.trim().isEmpty)
+    if (value == null || value.trim().isEmpty) {
       return 'Years of experience is required';
-    if (int.tryParse(value.trim()) == null)
+    }
+    if (int.tryParse(value.trim()) == null) {
       return 'Enter a valid number of years';
+    }
     return null;
   }
 
@@ -145,11 +153,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
           password: _password.text,
           studentData: {
             'studentId': _studentId.text.trim(),
+            'alias': _alias.text.trim(),
             'faculty': _faculty.text.trim(),
             'department': _department.text.trim(),
             'degreeProgram': _degree.text.trim(),
             'academicYear': _academicYear,
             'intake': _intake.text.trim(),
+            'batch': _batch.text.trim(),
             'phoneNumber': _phone.text.trim(),
             'whatsappNumber': (_sameWhatsapp ? _phone.text : _whatsapp.text)
                 .trim(),
@@ -181,13 +191,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
           },
         );
       }
-      if (mounted)
+      if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
             builder: (_) => EmailVerificationScreen(authService: _authService),
           ),
           (route) => false,
         );
+      }
     } catch (error) {
       if (mounted) _showMessage(authErrorMessage(error), isError: true);
     } finally {
@@ -460,6 +471,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     ),
     const SizedBox(height: 14),
     AuthTextField(
+      controller: _alias,
+      label: 'Counselor-facing alias',
+      hint: 'e.g. Student#4821',
+      icon: Icons.visibility_off_outlined,
+      validator: (value) => requiredValue(value, 'Alias is required'),
+    ),
+    const SizedBox(height: 14),
+    AuthTextField(
       controller: _faculty,
       label: 'Faculty / school',
       hint: 'Your faculty or school',
@@ -502,6 +521,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       label: 'Intake / batch (optional)',
       hint: 'e.g. 2024 September',
       icon: Icons.groups_outlined,
+    ),
+    const SizedBox(height: 14),
+    AuthTextField(
+      controller: _batch,
+      label: 'Batch (optional)',
+      hint: 'e.g. 2024',
+      icon: Icons.groups_2_outlined,
     ),
   ];
 

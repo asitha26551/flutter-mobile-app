@@ -11,7 +11,6 @@ ThemeData buildAppTheme() {
     colorScheme: scheme.copyWith(primary: primaryGreen, surface: Colors.white),
     scaffoldBackgroundColor: pageBackground,
     useMaterial3: true,
-    fontFamily: 'sans',
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: Colors.white,
