@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../auth/login_screen.dart';
+import '../booking/my_schedule_screen.dart';
+import '../counselors/counselor_directory_screen.dart';
 import '../student/student_privacy_settings_screen.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/auth_widgets.dart';
@@ -129,12 +131,28 @@ class ClientHomeScreen extends StatelessWidget {
             icon: Icons.search_rounded,
             title: 'Find a counselor',
             subtitle: 'Connect with the right professional',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CounselorDirectoryScreen(),
+                ),
+              );
+            },
           ),
 
           _ActionTile(
             icon: Icons.calendar_month_rounded,
             title: 'Book a session',
             subtitle: 'Choose a time that works for you',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MyScheduleScreen(),
+                ),
+              );
+            },
           ),
 
           _ActionTile(
@@ -151,6 +169,16 @@ class ClientHomeScreen extends StatelessWidget {
             icon: Icons.person_outline_rounded,
             title: 'My profile',
             subtitle: 'Manage your personal details',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StudentPrivacySettingsScreen(
+                    studentId: authService.currentUser?.uid ?? '',
+                  ),
+                ),
+              );
+            },
           ),
 
           // TEMPORARY Mood Log tile
