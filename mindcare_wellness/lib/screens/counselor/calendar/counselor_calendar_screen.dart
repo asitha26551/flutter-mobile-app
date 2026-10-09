@@ -775,39 +775,67 @@ class _CalendarAppointment extends StatelessWidget {
     };
     final location = item.location?.trim();
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.fromLTRB(14, 13, 10, 11),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border(left: BorderSide(color: statusColor, width: 4)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE5EAF0)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A0C2417),
+            blurRadius: 16,
+            offset: Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Text(
-                _timeRange(item),
-                style: const TextStyle(
-                  color: dashboardInk,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.event_outlined, color: statusColor, size: 20),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _timeRange(item),
+                      style: const TextStyle(
+                        color: dashboardInk,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _sessionTypeLabel(item.sessionType),
+                      style: const TextStyle(
+                        color: Color(0xFF667085),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(width: 9),
-              _AppointmentChip(
-                label: _sessionTypeLabel(item.sessionType),
-                color: dashboardGreen,
-              ),
-              const Spacer(),
+              const SizedBox(width: 8),
               _AppointmentChip(
                 label: appointmentStatusLabel(item.status),
                 color: statusColor,
               ),
             ],
           ),
-          const SizedBox(height: 9),
+          const SizedBox(height: 14),
           Text(
             item.studentAlias,
             style: const TextStyle(
@@ -816,16 +844,16 @@ class _CalendarAppointment extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 5),
           Text(
             'Topic: ${item.reason}',
-            style: const TextStyle(color: Colors.blueGrey, fontSize: 12),
+            style: const TextStyle(color: Color(0xFF667085), fontSize: 12),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: 9),
           _MoodLabel(item: item),
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 10),
-            child: Divider(height: 1, color: Color(0xFFE7EFEA)),
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Divider(height: 1, color: Color(0xFFE8EDF2)),
           ),
           Row(
             children: [
@@ -840,16 +868,13 @@ class _CalendarAppointment extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF009B16),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 10,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
                   textStyle: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),

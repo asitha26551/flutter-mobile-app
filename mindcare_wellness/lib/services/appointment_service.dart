@@ -164,6 +164,26 @@ class AppointmentService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+  Future<void> withdrawPending(String id) async {
+    final reference = _firestore.collection('appointments').doc(id);
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(reference);
+      if (!snapshot.exists) {
+        throw StateError('This appointment request no longer exists.');
+      }
+      final status = (snapshot.data()?['status'] as String? ?? '').toLowerCase();
+      if (status != 'pending') {
+        throw StateError('Only an unconfirmed request can be withdrawn.');
+      }
+      transaction.update(reference, {
+        'status': 'cancelled',
+        'cancellationReason': 'Withdrawn by student',
+        'cancelledBy': uid,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
   /// Reschedule an appointment through the trusted backend.
   /// The backend handles Zoom meeting updates for video appointments.
   Future<void> reschedule(
