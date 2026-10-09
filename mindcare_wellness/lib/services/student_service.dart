@@ -36,7 +36,7 @@ class StudentService {
     String fullName = '';
 
     final userSnapshot = await userFuture;
-    fullName = (userSnapshot?.data()?['fullName'] as String?)?.trim() ?? '';
+    fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
 
     return {
       'student': student,
@@ -47,23 +47,6 @@ class StudentService {
   }
 
   Future<StudentModel?> mine() => get(uid);
-
-  Future<void> updateAnonymousMode({
-    required String studentId,
-    required bool isAnonymous,
-  }) async {
-    await _firestore.collection('students').doc(studentId).update({
-      'isAnonymous': isAnonymous,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> updateStudent({
-    required String studentId,
-    required Map<String, dynamic> data,
-  }) async {
-    await _firestore.collection('students').doc(studentId).update(data);
-  }
 
   Future<void> updatePriority({
     required String studentId,

@@ -21,28 +21,6 @@ class CounselorDashboardScreen extends StatefulWidget {
 class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
   final service = CounselorService();
   int selectedIndex = 0;
-  bool _syncing = false;
-
-  Future<void> _syncAppointments() async {
-    if (_syncing) return;
-    setState(() => _syncing = true);
-    try {
-      await service.syncAppointments();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Appointments synced.')),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not sync appointments. Try again.')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -50,30 +28,10 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
     body: IndexedStack(
       index: selectedIndex,
       children: [
-        CounselorHomeScreen(
-          service: service,
-          authService: widget.authService,
-          onSync: _syncAppointments,
-          syncing: _syncing,
-        ),
-        CounselorCalendarScreen(
-          service: service,
-          authService: widget.authService,
-          onSync: _syncAppointments,
-          syncing: _syncing,
-        ),
-        CounselorNotesScreen(
-          service: service,
-          authService: widget.authService,
-          onSync: _syncAppointments,
-          syncing: _syncing,
-        ),
-        CounselorReportsScreen(
-          service: service,
-          authService: widget.authService,
-          onSync: _syncAppointments,
-          syncing: _syncing,
-        ),
+        CounselorHomeScreen(service: service),
+        CounselorCalendarScreen(service: service),
+        CounselorNotesScreen(service: service),
+        CounselorReportsScreen(service: service),
       ],
     ),
     bottomNavigationBar: NavigationBar(

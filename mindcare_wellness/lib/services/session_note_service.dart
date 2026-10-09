@@ -3,35 +3,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/session_note_model.dart';
 import '../models/appointment_model.dart';
-import '../models/student_model.dart';
 
 class SessionNoteEntry {
-  const SessionNoteEntry({
-    required this.note,
-    this.appointment,
-    this.displayName = '',
-    this.alias,
-    this.fullName,
-  });
+  const SessionNoteEntry({required this.note, this.appointment});
 
   final SessionNoteModel note;
   final AppointmentModel? appointment;
-  final String displayName;
-  final String? alias;
-  final String? fullName;
 
   String get studentLabel {
-    if (displayName.trim().isNotEmpty) return displayName;
-    return appointment?.studentId.isNotEmpty == true ? 'Student' : 'Anonymous student';
-  }
-
-  bool matchesQuery(String query) {
-    final normalizedQuery = query.trim().toLowerCase();
-    if (normalizedQuery.isEmpty) return true;
-    final aliasValue = alias?.trim() ?? '';
-    final fullNameValue = fullName?.trim() ?? '';
-    final combined = [aliasValue, fullNameValue, displayName].join(' ').toLowerCase();
-    return combined.contains(normalizedQuery);
+    final studentId = appointment?.studentId ?? note.studentId;
+    return appointment?.studentId.isNotEmpty == true
+        ? 'Student #${studentId.length > 6 ? studentId.substring(0, 6) : studentId}'
+        : 'Anonymous student';
   }
 }
 
@@ -72,41 +55,11 @@ class SessionNoteService {
           .collection('appointments')
           .doc(note.appointmentId)
           .get();
-      final appointmentModel = appointment.exists
-          ? AppointmentModel.fromFirestore(appointment)
-          : null;
-      final studentId = appointmentModel?.studentId ?? note.studentId;
-      StudentModel student = StudentModel(uid: studentId);
-
-      if (studentId.isNotEmpty) {
-        try {
-          final studentSnapshot = await _firestore.collection('students').doc(studentId).get();
-          if (studentSnapshot.exists) {
-            student = StudentModel.fromFirestore(studentSnapshot);
-          }
-        } catch (_) {
-          student = StudentModel(uid: studentId);
-        }
-      }
-
-      String fullName = '';
-      if (studentId.isNotEmpty) {
-        try {
-          final userSnapshot = await _firestore.collection('users').doc(studentId).get();
-          fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
-        } catch (_) {
-          fullName = '';
-        }
-      }
-
-      final displayName = student.counselorDisplayName(fullName: fullName);
-
       return SessionNoteEntry(
         note: note,
-        appointment: appointmentModel,
-        displayName: displayName,
-        alias: student.alias,
-        fullName: fullName,
+        appointment: appointment.exists
+            ? AppointmentModel.fromFirestore(appointment)
+            : null,
       );
     }));
     return entries;
