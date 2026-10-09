@@ -10,7 +10,6 @@ import '../counselor_theme.dart';
 import '../appointment_details_screen.dart';
 import '../calendar/counselor_calendar_screen.dart';
 import '../notes/counselor_notes_screen.dart';
-import 'home_widgets.dart';
 
 class CounselorHomeScreen extends StatelessWidget {
   const CounselorHomeScreen({required this.service, super.key});
