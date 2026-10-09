@@ -277,7 +277,7 @@ bottomNavigationBar: _buildBottomNavigationBar(),
             ),
             const SizedBox(width: 4),
             const Text(
-              'Privacy Mode: Active',
+              ' : Active',
               style: TextStyle(
                 color: _darkEmerald,
                 fontSize: 11.5,
