@@ -4,14 +4,29 @@ import '../../../models/notification_model.dart';
 import '../../../services/notification_service.dart';
 import '../counselor_theme.dart';
 
-class CounselorNotificationsScreen extends StatelessWidget {
+class CounselorNotificationsScreen extends StatefulWidget {
   const CounselorNotificationsScreen({super.key});
+
+  @override
+  State<CounselorNotificationsScreen> createState() =>
+      _CounselorNotificationsScreenState();
+}
+
+class _CounselorNotificationsScreenState
+    extends State<CounselorNotificationsScreen> {
+  late final Stream<List<NotificationModel>> _notificationsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationsStream = NotificationService().mine();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Notifications')),
     body: StreamBuilder<List<NotificationModel>>(
-      stream: NotificationService().mine(),
+      stream: _notificationsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());

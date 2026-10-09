@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../auth/login_screen.dart';
+import '../booking/my_schedule_screen.dart';
+import '../counselors/counselor_directory_screen.dart';
+import '../student/student_privacy_settings_screen.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/auth_widgets.dart';
-import '../student/emergency_support_screen.dart';
-import '../student/notifications_screen.dart';
-import '../student/reminder_preferences_screen.dart';
-import '../student/settings_screen.dart';
+import '../student/mood_log_screen.dart';
+import '../student/student_appointments_screen.dart';
 
 class ClientHomeScreen extends StatelessWidget {
   const ClientHomeScreen({required this.authService, super.key});
@@ -22,28 +24,51 @@ class ClientHomeScreen extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.w800),
         ),
         actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const StudentNotificationsScreen()),
-            ),
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-
-          IconButton(
-            tooltip: 'Settings',
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => SettingsScreen(authService: authService),
-              ),
-            ),
-            icon: const Icon(Icons.settings_outlined),
-          ),
-
-          IconButton(
-            tooltip: 'Log out',
-            onPressed: () => authService.logout(),
-            icon: const Icon(Icons.logout_rounded),
+          PopupMenuButton<String>(
+            tooltip: 'Account menu',
+            onSelected: (value) async {
+              if (value == 'settings') {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StudentPrivacySettingsScreen(
+                      studentId: authService.currentUser?.uid ?? '',
+                    ),
+                  ),
+                );
+                return;
+              }
+              if (value == 'logout') {
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Log out'),
+                    content: const Text('Are you sure you want to sign out?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancel'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Log out'),
+                      ),
+                    ],
+                  ),
+                );
+                if (shouldLogout != true) return;
+                await authService.logout();
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => LoginScreen(authService: authService)),
+                  (route) => false,
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'settings', child: Text('Settings')),
+              PopupMenuItem(value: 'logout', child: Text('Logout')),
+            ],
           ),
         ],
       ),
@@ -52,8 +77,9 @@ class ClientHomeScreen extends StatelessWidget {
         children: [
           Text(
             'Your wellbeing matters.',
-            style: Theme.of(context).textTheme.headlineSmall
-                ?.copyWith(fontWeight: FontWeight.w800),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
           ),
           const SizedBox(height: 5),
           const Text(
@@ -61,6 +87,7 @@ class ClientHomeScreen extends StatelessWidget {
             style: TextStyle(color: Colors.black54),
           ),
           const SizedBox(height: 24),
+
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -78,75 +105,95 @@ class ClientHomeScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Take a gentle pause today. Small steps count.',
-                    style: TextStyle(fontWeight: FontWeight.w600, height: 1.35),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      height: 1.35,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+
           const SizedBox(height: 28),
+
           const Text(
             'How can we help?',
-            style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+            style: TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
           ),
+
           const SizedBox(height: 14),
-          Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-              leading: CircleAvatar(
-                backgroundColor: Colors.red.shade50,
-                foregroundColor: Colors.red.shade700,
-                child: const Icon(Icons.emergency_outlined),
-              ),
-              title: const Text(
-                'Emergency support',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: const Text('Call a crisis helpline now'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const EmergencySupportScreen()),
-              ),
-            ),
-          ),
-          Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
-              leading: const CircleAvatar(
-                backgroundColor: mintGreen,
-                foregroundColor: primaryGreen,
-                child: Icon(Icons.alarm_rounded),
-              ),
-              title: const Text(
-                'Reminder preferences',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: const Text('Choose how and when you are reminded'),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ReminderPreferencesScreen(),
-                ),
-              ),
-            ),
-          ),
+
           _ActionTile(
             icon: Icons.search_rounded,
             title: 'Find a counselor',
             subtitle: 'Connect with the right professional',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const CounselorDirectoryScreen(),
+                ),
+              );
+            },
           ),
+
           _ActionTile(
             icon: Icons.calendar_month_rounded,
             title: 'Book a session',
             subtitle: 'Choose a time that works for you',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MyScheduleScreen(),
+                ),
+              );
+            },
           ),
+
+          _ActionTile(
+            icon: Icons.event_available_outlined,
+            title: 'My appointments',
+            subtitle: 'View appointment times and join eligible sessions',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => StudentAppointmentsScreen()),
+            ),
+          ),
+
           _ActionTile(
             icon: Icons.person_outline_rounded,
             title: 'My profile',
             subtitle: 'Manage your personal details',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => StudentPrivacySettingsScreen(
+                    studentId: authService.currentUser?.uid ?? '',
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // TEMPORARY Mood Log tile
+          _ActionTile(
+            icon: Icons.mood_rounded,
+            title: 'Mood Log',
+            subtitle: 'Record how you are feeling today',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MoodLogScreen(),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -159,24 +206,35 @@ class _ActionTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.onTap,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 5,
+        ),
         leading: CircleAvatar(
           backgroundColor: mintGreen,
           foregroundColor: primaryGreen,
           child: Icon(icon),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.chevron_right_rounded),
       ),
