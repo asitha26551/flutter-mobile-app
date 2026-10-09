@@ -1,13 +1,24 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/counselor_models.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/counselor_service.dart';
+import '../counselor_page_header.dart';
 import '../counselor_theme.dart';
 
 class CounselorReportsScreen extends StatefulWidget {
-  const CounselorReportsScreen({required this.service, super.key});
+  const CounselorReportsScreen({
+    required this.service,
+    required this.authService,
+    required this.onSync,
+    required this.syncing,
+    super.key,
+  });
 
   final CounselorService service;
+  final AuthService authService;
+  final Future<void> Function() onSync;
+  final bool syncing;
 
   @override
   State<CounselorReportsScreen> createState() => _CounselorReportsScreenState();
@@ -16,6 +27,13 @@ class CounselorReportsScreen extends StatefulWidget {
 class _CounselorReportsScreenState extends State<CounselorReportsScreen> {
   _ReportRange _range = _ReportRange.thisWeek;
   DateTimeRange? _customRange;
+  late final Stream<List<CounselorAppointment>> _appointmentsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _appointmentsStream = widget.service.appointments();
+  }
 
   DateTimeRange get _selectedRange => _customRange ?? _range.range(DateTime.now());
 
@@ -49,7 +67,7 @@ class _CounselorReportsScreenState extends State<CounselorReportsScreen> {
   @override
   Widget build(BuildContext context) => SafeArea(
     child: StreamBuilder<List<CounselorAppointment>>(
-      stream: widget.service.appointments(),
+      stream: _appointmentsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: dashboardGreen));
@@ -66,7 +84,13 @@ class _CounselorReportsScreenState extends State<CounselorReportsScreen> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
           children: [
-            const ReportsHeader(),
+            CounselorPageHeader(
+              title: 'Reports',
+              service: widget.service,
+              authService: widget.authService,
+              onSync: widget.onSync,
+              syncing: widget.syncing,
+            ),
             const SizedBox(height: 16),
             const Text(
               'View your counseling activity and appointment statistics.',
@@ -96,48 +120,6 @@ class _CounselorReportsScreenState extends State<CounselorReportsScreen> {
     ),
   );
 }
-
-class ReportsHeader extends StatelessWidget {
-  const ReportsHeader({super.key});
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.shield_outlined, color: dashboardGreen, size: 22),
-      ),
-      const SizedBox(width: 12),
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('COUNSELOR PORTAL', style: TextStyle(color: dashboardGreen, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7)),
-            Text('Reports', style: TextStyle(color: dashboardInk, fontSize: 22, fontWeight: FontWeight.w800)),
-          ],
-        ),
-      ),
-      const CircleAvatar(
-        radius: 20,
-        backgroundColor: Color(0xFFDDF8E6),
-        child: Icon(Icons.person, color: dashboardGreen, size: 22),
-      ),
-    ],
-  );
-}
-
 
 class _RangeSelector extends StatelessWidget {
   const _RangeSelector({required this.range, required this.customRange, required this.onChanged});

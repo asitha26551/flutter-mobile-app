@@ -2,16 +2,27 @@ import 'package:flutter/material.dart';
 
 import '../../../models/appointment_model.dart';
 import '../../../models/session_note_model.dart';
+import '../../../services/auth_service.dart';
 import '../../../services/counselor_service.dart';
 import '../../../services/session_note_service.dart';
 import '../../../widgets/common/empty_state.dart';
 import '../counselor_theme.dart';
+import '../counselor_page_header.dart';
 import 'session_note_details_screen.dart';
 
 class CounselorNotesScreen extends StatefulWidget {
-  const CounselorNotesScreen({required this.service, super.key});
+  const CounselorNotesScreen({
+    required this.service,
+    required this.authService,
+    required this.onSync,
+    required this.syncing,
+    super.key,
+  });
 
   final CounselorService service;
+  final AuthService authService;
+  final Future<void> Function() onSync;
+  final bool syncing;
 
   @override
   State<CounselorNotesScreen> createState() => _CounselorNotesScreenState();
@@ -19,8 +30,22 @@ class CounselorNotesScreen extends StatefulWidget {
 
 class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   final _noteService = SessionNoteService();
+  final _searchController = TextEditingController();
+  late final Stream<List<SessionNoteModel>> _notesStream;
   Future<List<SessionNoteEntry>>? _entriesFuture;
   String _entryKey = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _notesStream = _noteService.forCounselor();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   Future<List<SessionNoteEntry>> _loadEntries(List<SessionNoteModel> notes) {
     final key = notes.map((note) => note.id).join('|');
@@ -34,7 +59,7 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
   @override
   Widget build(BuildContext context) => SafeArea(
     child: StreamBuilder<List<SessionNoteModel>>(
-      stream: _noteService.forCounselor(),
+      stream: _notesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -57,10 +82,14 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
               return _NotesError(onRetry: () => setState(() {}));
             }
             final allEntries = entrySnapshot.data ?? const [];
+            final query = _searchController.text.trim().toLowerCase();
+            final filteredEntries = allEntries.where(
+              (entry) => query.isEmpty || entry.matchesQuery(query),
+            );
 
             // Group by student — one card per student, latest note first
             final groupedEntries = <String, List<SessionNoteEntry>>{};
-            for (final entry in allEntries) {
+            for (final entry in filteredEntries) {
               final key = entry.note.studentId.isNotEmpty
                   ? entry.note.studentId
                   : entry.studentLabel;
@@ -70,7 +99,41 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
               children: [
-                const _NotesHeader(),
+                CounselorPageHeader(
+                  title: 'Notes',
+                  service: widget.service,
+                  authService: widget.authService,
+                  onSync: widget.onSync,
+                  syncing: widget.syncing,
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFDCEFE1)),
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search student by name or alias',
+                      prefixIcon: const Icon(Icons.search, color: dashboardGreen),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              onPressed: () => _searchController.clear(),
+                              icon: const Icon(Icons.clear),
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 14,
+                      ),
+                    ),
+                    textInputAction: TextInputAction.search,
+                    onChanged: (_) => setState(() {}),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 if (notes.isEmpty)
                   const EmptyState(
@@ -78,7 +141,7 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
                         'No session notes yet\nCompleted counseling session notes will appear here.',
                   )
                 else if (groupedEntries.isEmpty)
-                  const EmptyState(message: 'No notes found.')
+                  const EmptyState(message: 'No matching students')
                 else
                   ...groupedEntries.values.map(
                     (studentEntries) {
@@ -123,70 +186,6 @@ class _CounselorNotesScreenState extends State<CounselorNotesScreen> {
         );
       },
     ),
-  );
-}
-
-// ──────────────────────────────────────────
-// Header (matches image top-bar style)
-// ──────────────────────────────────────────
-class _NotesHeader extends StatelessWidget {
-  const _NotesHeader();
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: const Icon(Icons.shield_outlined, color: dashboardGreen, size: 22),
-      ),
-      const SizedBox(width: 12),
-      const Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'COUNSELOR PORTAL',
-              style: TextStyle(
-                color: dashboardGreen,
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-                letterSpacing: .7,
-              ),
-            ),
-            Text(
-              'Notes',
-              style: TextStyle(
-                color: dashboardInk,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
-        ),
-      ),
-      Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: const Color(0xFFD0EDD8), width: 1.5),
-        ),
-        child: const Icon(Icons.person, color: dashboardGreen, size: 22),
-      ),
-    ],
   );
 }
 

@@ -1,5 +1,17 @@
-import '../client/client_home_screen.dart';
+import 'package:flutter/material.dart';
 
-class StudentHomeScreen extends ClientHomeScreen {
-  const StudentHomeScreen({required super.authService, super.key});
+import '../../services/auth_service.dart';
+import '../dashboard/student_dashboard_screen.dart';
+
+/// Primary Student Home screen delivering the Student Privacy,
+/// Identity Controls, and Anonymous Booking experience.
+class StudentHomeScreen extends StatelessWidget {
+  const StudentHomeScreen({required this.authService, super.key});
+
+  final AuthService authService;
+
+  @override
+  Widget build(BuildContext context) {
+    return StudentDashboardScreen(authService: authService);
+  }
 }

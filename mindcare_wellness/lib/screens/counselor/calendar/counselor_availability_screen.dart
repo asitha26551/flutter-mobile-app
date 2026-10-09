@@ -15,7 +15,14 @@ class CounselorAvailabilityScreen extends StatefulWidget {
 class _CounselorAvailabilityScreenState
     extends State<CounselorAvailabilityScreen> {
   final _service = AvailabilityService();
+  late final Stream<List<CounselorAvailabilityModel>> _availabilityStream;
   String selectedDay = 'Monday';
+
+  @override
+  void initState() {
+    super.initState();
+    _availabilityStream = _service.forCounselor(_service.uid);
+  }
 
   @override
   Widget build(BuildContext context) => MediaQuery.withClampedTextScaling(
@@ -23,7 +30,7 @@ class _CounselorAvailabilityScreenState
     maxScaleFactor: 1.15,
     child: SafeArea(
       child: StreamBuilder<List<CounselorAvailabilityModel>>(
-        stream: _service.forCounselor(_service.uid),
+        stream: _availabilityStream,
         builder: (context, snapshot) {
           final items = [...snapshot.data ?? const <CounselorAvailabilityModel>[]]
             ..sort(_compareAvailability);
