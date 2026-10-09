@@ -7,6 +7,7 @@ import '../student/student_privacy_settings_screen.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/auth_widgets.dart';
 import '../student/mood_log_screen.dart';
+import '../student/student_appointments_screen.dart';
 
 class ClientHomeScreen extends StatelessWidget {
   const ClientHomeScreen({required this.authService, super.key});
@@ -152,6 +153,16 @@ class ClientHomeScreen extends StatelessWidget {
                 ),
               );
             },
+          ),
+
+          _ActionTile(
+            icon: Icons.event_available_outlined,
+            title: 'My appointments',
+            subtitle: 'View appointment times and join eligible sessions',
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => StudentAppointmentsScreen()),
+            ),
           ),
 
           _ActionTile(

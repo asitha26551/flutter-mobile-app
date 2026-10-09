@@ -17,6 +17,7 @@ class AppointmentModel {
     this.studentNotes,
     this.cancellationReason,
     this.cancelledBy,
+    this.rejectionReason,
     this.createdAt,
     this.updatedAt,
   });
@@ -34,6 +35,7 @@ class AppointmentModel {
   final String? studentNotes;
   final String? cancellationReason;
   final String? cancelledBy;
+  final String? rejectionReason;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -97,6 +99,7 @@ class AppointmentModel {
       studentNotes: data['studentNotes'] as String?,
       cancellationReason: data['cancellationReason'] as String?,
       cancelledBy: data['cancelledBy'] as String?,
+      rejectionReason: data['rejectionReason'] as String?,
       createdAt: firestoreDate(data['createdAt']),
       updatedAt: firestoreDate(data['updatedAt']),
     );
@@ -117,6 +120,7 @@ class AppointmentModel {
         studentNotes: data['studentNotes'] as String?,
         cancellationReason: data['cancellationReason'] as String?,
         cancelledBy: data['cancelledBy'] as String?,
+        rejectionReason: data['rejectionReason'] as String?,
         createdAt: firestoreDate(data['createdAt']),
         updatedAt: firestoreDate(data['updatedAt']),
       );
@@ -138,6 +142,7 @@ class AppointmentModel {
     'studentNotes': studentNotes,
     'cancellationReason': cancellationReason,
     'cancelledBy': cancelledBy,
+    'rejectionReason': rejectionReason,
     'createdAt': firestoreTimestamp(createdAt) ?? FieldValue.serverTimestamp(),
     'updatedAt': FieldValue.serverTimestamp(),
   };
