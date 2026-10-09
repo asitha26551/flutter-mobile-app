@@ -9,6 +9,7 @@ import '../booking/book_appointment_screen.dart';
 import '../booking/my_schedule_screen.dart';
 import '../counselors/counselor_directory_screen.dart';
 import '../privacy/privacy_controls_screen.dart';
+import '../student/mood_log_screen.dart';
 
 /// Screen 1: Student Dashboard Screen
 /// Features a "Privacy Mode: Active" status indicator, interactive mood emoji selector,
@@ -225,18 +226,24 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         ],
       ),
       body: IndexedStack(
-        index: _selectedTabIndex,
-        children: [
-          _buildHomeDashboardView(),
-          _buildScheduleView(),
-          CounselorDirectoryScreen(
-            bookingService: _bookingService,
-            privacyService: _privacyService,
-          ),
-          _buildMoodLogView(),
-        ],
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
+  index: _selectedTabIndex,
+  children: [
+    _buildHomeDashboardView(),
+    _buildScheduleView(),
+    CounselorDirectoryScreen(
+      bookingService: _bookingService,
+      privacyService: _privacyService,
+    ),
+    MoodLogScreen(
+      onBackHome: () {
+        setState(() {
+          _selectedTabIndex = 0;
+        });
+      },
+    ),
+  ],
+),
+bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -760,53 +767,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       bookingService: _bookingService,
       privacyService: _privacyService,
       isEmbedded: true,
-    );
-  }
-
-  /// Mood Log history view
-  Widget _buildMoodLogView() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 28),
-      children: [
-        _buildSectionHeader(
-          'Mood Tracker & Check-in',
-          'Private emotional wellbeing timeline',
-        ),
-        const SizedBox(height: 14),
-        _buildMoodSection(),
-        const SizedBox(height: 18),
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'WELLBEING TIP',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF94A3B8),
-                  letterSpacing: 0.6,
-                ),
-              ),
-              SizedBox(height: 6),
-              Text(
-                'Taking a 5-minute mindful breathing break can reduce cortisol levels by up to 25%. You are doing great.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF334155),
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 

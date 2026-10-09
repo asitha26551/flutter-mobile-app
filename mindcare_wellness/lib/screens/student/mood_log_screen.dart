@@ -11,12 +11,14 @@ class MoodLogScreen extends StatefulWidget {
     this.initialMoodScore,
     this.initialStressLevel,
     this.initialNote,
+    this.onBackHome,
   });
 
   final String? entryId;
   final int? initialMoodScore;
   final int? initialStressLevel;
   final String? initialNote;
+  final VoidCallback? onBackHome;
 
   bool get isEditing => entryId != null;
 
@@ -92,7 +94,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => MoodSavedScreen(
@@ -105,16 +107,17 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => WeeklyWellbeingScreen(),
+                 builder: (context) => WeeklyWellbeingScreen(
+                   onBackHome: widget.onBackHome,
+), 
                 ),
               );
             },
 
             onBackHome: () {
-              Navigator.of(context).popUntil(
-                (route) => route.isFirst,
-              );
-            },
+                    Navigator.of(context).pop();
+                    widget.onBackHome?.call();
+},
 
             onEditToday: () {
               Navigator.pushReplacement(
@@ -125,6 +128,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                     initialMoodScore: selectedMood,
                     initialStressLevel: selectedStress,
                     initialNote: note.isEmpty ? null : note,
+                    onBackHome: widget.onBackHome,
                   ),
                 ),
               );
@@ -172,7 +176,14 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
             Icons.arrow_back,
             color: Color(0xFF0B8F2A),
           ),
-          onPressed: () => Navigator.pop(context),
+         onPressed: () {
+  if (widget.onBackHome != null) {
+    Navigator.of(context).popUntil((route) => route.isFirst);
+    widget.onBackHome!();
+  } else {
+    Navigator.maybePop(context);
+  }
+},
         ),
         title: Text(
           widget.isEditing
@@ -585,8 +596,9 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                WeeklyWellbeingScreen(),
+                           builder: (context) => WeeklyWellbeingScreen(
+                             onBackHome: widget.onBackHome,
+),
                           ),
                         );
                       },
@@ -597,6 +609,7 @@ class _MoodLogScreenState extends State<MoodLogScreen> {
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
+
                       ),
                     ),
                   ),

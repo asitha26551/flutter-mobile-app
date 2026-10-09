@@ -7,7 +7,12 @@ import '../../services/mood_service.dart';
 import 'mood_log_screen.dart';
 
 class WeeklyWellbeingScreen extends StatelessWidget {
-  WeeklyWellbeingScreen({super.key});
+  WeeklyWellbeingScreen({
+    super.key,
+    this.onBackHome,
+  });
+
+  final VoidCallback? onBackHome;
 
   final MoodService _moodService = MoodService();
 
@@ -186,8 +191,9 @@ class WeeklyWellbeingScreen extends StatelessWidget {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) =>
-                                          const MoodLogScreen(),
+                                     builder: (context) => MoodLogScreen(
+                                     onBackHome: onBackHome,
+                                     ), 
                                     ),
                                   );
                                 },
