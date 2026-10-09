@@ -36,7 +36,7 @@ class StudentService {
     String fullName = '';
 
     final userSnapshot = await userFuture;
-    fullName = (userSnapshot?.data()?['fullName'] as String?)?.trim() ?? '';
+    fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
 
     return {
       'student': student,
