@@ -9,6 +9,8 @@ import '../../models/appointment_model.dart';
 import '../booking/book_appointment_screen.dart';
 import '../counselors/counselor_directory_screen.dart';
 import '../privacy/privacy_controls_screen.dart';
+import '../student/notifications_screen.dart';
+import '../student/settings_screen.dart';
 import '../student/weekly_wellbeing_screen.dart';
 import '../student/student_appointments_screen.dart';
 
@@ -179,6 +181,22 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
+  void _navigateToSettings() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(
+          authService: _authService ?? AuthService(),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToNotifications() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const StudentNotificationsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -215,6 +233,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         actions: [
           // Top Bar: "Privacy Mode: Active" status indicator
           _buildPrivacyStatusPill(),
+          IconButton(
+            tooltip: 'Notifications',
+            icon: const Icon(Icons.notifications_none_rounded, size: 21),
+            color: const Color(0xFF64748B),
+            onPressed: _navigateToNotifications,
+          ),
+          IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_outlined, size: 21),
+            color: const Color(0xFF64748B),
+            onPressed: _navigateToSettings,
+          ),
           IconButton(
             tooltip: 'Log out',
             icon: const Icon(Icons.logout_rounded, size: 20),

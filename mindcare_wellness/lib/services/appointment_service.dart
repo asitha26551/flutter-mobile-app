@@ -80,6 +80,18 @@ class AppointmentService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    batch.set(
+      _firestore
+          .collection('notifications')
+          .doc('appointment_${reference.id}_requested'),
+      _appointmentNotification(
+        counselorId,
+        reference.id,
+        title: 'New appointment request',
+        body: 'A student has requested a counseling session.',
+        type: 'appointment',
+      ),
+    );
     batch.update(_firestore.collection('students').doc(uid), {
       'authorizedCounselorIds': FieldValue.arrayUnion([counselorId]),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -156,16 +168,38 @@ class AppointmentService {
       .doc(id)
       .update({'status': status, 'updatedAt': FieldValue.serverTimestamp()});
 
-  Future<void> cancel(String id, {required String reason}) =>
-      _firestore.collection('appointments').doc(id).update({
-        'status': 'cancelled',
-        'cancellationReason': reason,
-        'cancelledBy': uid,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+  Future<void> cancel(String id, {required String reason}) async {
+    final appointmentRef = _firestore.collection('appointments').doc(id);
+    final appointment = await appointmentRef.get();
+    final counselorId = appointment.data()?['counselorId'] as String?;
+    if (!appointment.exists || counselorId == null || counselorId.isEmpty) {
+      throw StateError('This appointment could not be found.');
+    }
+    final batch = _firestore.batch();
+    batch.update(appointmentRef, {
+      'status': 'cancelled',
+      'cancellationReason': reason,
+      'cancelledBy': uid,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    batch.set(
+      _firestore.collection('notifications').doc('appointment_${id}_cancelled'),
+      _appointmentNotification(
+        counselorId,
+        id,
+        title: 'Appointment cancelled',
+        body: 'A student cancelled a counseling appointment.',
+        type: 'appointment_cancelled',
+      ),
+    );
+    await batch.commit();
+  }
 
   Future<void> withdrawPending(String id) async {
     final reference = _firestore.collection('appointments').doc(id);
+    final notification = _firestore
+        .collection('notifications')
+        .doc('appointment_${id}_cancelled');
     await _firestore.runTransaction((transaction) async {
       final snapshot = await transaction.get(reference);
       if (!snapshot.exists) {
@@ -175,14 +209,44 @@ class AppointmentService {
       if (status != 'pending') {
         throw StateError('Only an unconfirmed request can be withdrawn.');
       }
+      final counselorId = snapshot.data()?['counselorId'] as String?;
+      if (counselorId == null || counselorId.isEmpty) {
+        throw StateError('This appointment could not be found.');
+      }
       transaction.update(reference, {
         'status': 'cancelled',
         'cancellationReason': 'Withdrawn by student',
         'cancelledBy': uid,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+      transaction.set(
+        notification,
+        _appointmentNotification(
+          counselorId,
+          id,
+          title: 'Appointment cancelled',
+          body: 'A student cancelled a counseling appointment.',
+          type: 'appointment_cancelled',
+        ),
+      );
     });
   }
+
+  Map<String, dynamic> _appointmentNotification(
+    String recipientId,
+    String appointmentId, {
+    required String title,
+    required String body,
+    required String type,
+  }) => {
+    'userId': recipientId,
+    'title': title,
+    'body': body,
+    'type': type,
+    'relatedId': appointmentId,
+    'isRead': false,
+    'createdAt': FieldValue.serverTimestamp(),
+  };
 
   /// Reschedule an appointment through the trusted backend.
   /// The backend handles Zoom meeting updates for video appointments.

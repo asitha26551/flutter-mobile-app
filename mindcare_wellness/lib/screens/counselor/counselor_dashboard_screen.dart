@@ -7,6 +7,7 @@ import 'calendar/counselor_calendar_screen.dart';
 import 'home/counselor_home_screen.dart';
 import 'notes/counselor_notes_screen.dart';
 import 'reports/counselor_reports_screen.dart';
+import 'notifications/counselor_notifications_screen.dart';
 
 class CounselorDashboardScreen extends StatefulWidget {
   const CounselorDashboardScreen({required this.authService, super.key});
@@ -74,6 +75,7 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
           onSync: _syncAppointments,
           syncing: _syncing,
         ),
+        const CounselorNotificationsScreen(),
       ],
     ),
     bottomNavigationBar: Container(
@@ -116,6 +118,11 @@ class _CounselorDashboardScreenState extends State<CounselorDashboardScreen> {
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart_rounded, color: Color(0xFF059669)),
             label: 'Reports',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.notifications_none_rounded),
+            selectedIcon: Icon(Icons.notifications_rounded, color: Color(0xFF059669)),
+            label: 'Notifications',
           ),
         ],
       ),

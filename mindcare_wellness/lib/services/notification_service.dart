@@ -22,4 +22,21 @@ class NotificationService {
 
   Future<void> markRead(String notificationId) =>
       _firestore.collection('notifications').doc(notificationId).update({'isRead': true});
+
+  Future<void> markAllRead() async {
+    final unread = await _firestore
+        .collection('notifications')
+        .where('userId', isEqualTo: uid)
+        .where('isRead', isEqualTo: false)
+        .get();
+    if (unread.docs.isEmpty) return;
+    final batch = _firestore.batch();
+    for (final notification in unread.docs) {
+      batch.update(notification.reference, {'isRead': true});
+    }
+    await batch.commit();
+  }
+
+  Future<void> delete(String notificationId) =>
+      _firestore.collection('notifications').doc(notificationId).delete();
 }

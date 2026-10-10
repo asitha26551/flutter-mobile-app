@@ -91,12 +91,14 @@ class CounselorService {
                   resolved['student'] as StudentModel? ??
                   StudentModel(uid: studentId);
               final fullName = (resolved['fullName'] as String?) ?? '';
-              final displayName = bookingAlias?.isNotEmpty == true
-                  ? bookingAlias!
-                  : student.counselorDisplayName(fullName: fullName);
+              final displayName = student.isAnonymous
+                  ? student.counselorDisplayName(fullName: fullName)
+                  : bookingAlias?.isNotEmpty == true
+                      ? bookingAlias!
+                      : student.counselorDisplayName(fullName: fullName);
               data['studentAlias'] = displayName;
               data['studentIdentity'] = displayName;
-              if (bookingAlias?.isNotEmpty == true) {
+              if (student.isAnonymous || bookingAlias?.isNotEmpty == true) {
                 data.remove('studentFullName');
               } else {
                 data['studentFullName'] = fullName;

@@ -28,7 +28,10 @@ class StudentService {
         .collection('users')
         .doc(studentId)
         .get()
-        .then((snapshot) => snapshot, onError: (Object _) => null);
+        .then<DocumentSnapshot<Map<String, dynamic>>?>(
+          (snapshot) => snapshot,
+          onError: (Object _) => null,
+        );
     final studentSnapshot = await studentFuture;
     final student = studentSnapshot.exists
         ? StudentModel.fromFirestore(studentSnapshot)
@@ -36,7 +39,7 @@ class StudentService {
     String fullName = '';
 
     final userSnapshot = await userFuture;
-    fullName = (userSnapshot.data()?['fullName'] as String?)?.trim() ?? '';
+    fullName = (userSnapshot?.data()?['fullName'] as String?)?.trim() ?? '';
 
     return {
       'student': student,

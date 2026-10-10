@@ -134,6 +134,24 @@ function normalizeStatus(value: unknown): string {
   return String(value ?? '').trim().toLowerCase();
 }
 
+function appointmentNotification(
+  userId: string,
+  appointmentId: string,
+  title: string,
+  body: string,
+  type: string,
+): Record<string, unknown> {
+  return {
+    userId,
+    title,
+    body,
+    type,
+    relatedId: appointmentId,
+    isRead: false,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+}
+
 function ensureAuthorizedCounselor(userData: Record<string, unknown>): boolean {
   return (
     String(userData.role ?? '') === 'counselor' &&
@@ -315,7 +333,16 @@ async function handleRejectAppointment(req: express.Request, res: express.Respon
     const appointment = snapshot.data() ?? {};
     if (appointment.counselorId !== counselor.uid) { res.status(403).json({ error: 'Counselor does not own this appointment.' }); return; }
     if (normalizeStatus(appointment.status) !== 'pending') { res.status(409).json({ error: 'Only pending appointments can be rejected.' }); return; }
-    await ref.update({ status: 'rejected', rejectionReason, updatedAt: FieldValue.serverTimestamp() });
+    const batch = db.batch();
+    batch.update(ref, { status: 'rejected', rejectionReason, updatedAt: FieldValue.serverTimestamp() });
+    batch.set(db.collection('notifications').doc(`appointment_${appointmentId}_rejected`), appointmentNotification(
+      String(appointment.studentId),
+      appointmentId,
+      'Appointment request declined',
+      'Your counselor could not accept this appointment request.',
+      'appointment_rejected',
+    ));
+    await batch.commit();
     res.status(200).json({ success: true, appointmentId, status: 'rejected' });
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : 'Unable to reject appointment.' });
@@ -359,7 +386,16 @@ async function handleRescheduleAppointment(req: express.Request, res: express.Re
         await meetingRef.set({ appointmentId, zoomMeetingId: meeting.meetingId, startUrl: meeting.startUrl, joinUrl: meeting.joinUrl, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
       }
     }
-    await ref.update({ status: 'rescheduled', startAt: Timestamp.fromDate(startAt), endAt: Timestamp.fromDate(endAt), ...(sessionType === 'video' ? { meetingLink } : {}), updatedAt: FieldValue.serverTimestamp() });
+    const batch = db.batch();
+    batch.update(ref, { status: 'rescheduled', startAt: Timestamp.fromDate(startAt), endAt: Timestamp.fromDate(endAt), ...(sessionType === 'video' ? { meetingLink } : {}), updatedAt: FieldValue.serverTimestamp() });
+    batch.set(db.collection('notifications').doc(`appointment_${appointmentId}_rescheduled_${startAt.getTime()}`), appointmentNotification(
+      String(appointment.studentId),
+      appointmentId,
+      'Appointment rescheduled',
+      'Your counselor proposed a new time for your appointment.',
+      'appointment_rescheduled',
+    ));
+    await batch.commit();
     if (sessionType === 'video' && meetingId) {
       await db.collection('zoomMeetings').doc(appointmentId).set({ zoomMeetingId: meetingId, joinUrl: meetingLink, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
     }
@@ -500,7 +536,18 @@ async function handleConfirmAppointment(
       meetingLink: joinUrl ?? (typeof appointmentData.meetingLink === 'string' ? appointmentData.meetingLink : null),
     };
 
-    await appointmentSnapshot.ref.update(updatedValues);
+    const batch = db.batch();
+    batch.update(appointmentSnapshot.ref, updatedValues);
+    if (currentStatus !== 'confirmed') {
+      batch.set(db.collection('notifications').doc(`appointment_${appointmentId}_confirmed`), appointmentNotification(
+        String(appointmentData.studentId),
+        appointmentId,
+        'Appointment confirmed',
+        'Your counselor confirmed your appointment.',
+        'appointment_confirmed',
+      ));
+    }
+    await batch.commit();
 
     res.status(200).json({
       success: true,

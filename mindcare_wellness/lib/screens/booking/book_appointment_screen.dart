@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../controllers/schedule_controller.dart';
@@ -6,6 +7,7 @@ import '../../models/counselor_models.dart';
 import '../../services/booking_service.dart';
 import '../../services/appointment_service.dart';
 import '../../services/privacy_service.dart';
+import '../../services/student_service.dart';
 import 'booking_confirmation_screen.dart';
 
 /// Screen 4: Book Appointment Screen
@@ -40,6 +42,7 @@ class BookAppointmentScreen extends StatefulWidget {
 class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
   late final BookingService _bookingService;
   late final PrivacyService _privacyService;
+  final StudentService _studentService = StudentService();
 
   bool get _isEditing => widget.effectiveExisting != null;
   bool _isSaving = false;
@@ -216,7 +219,27 @@ class _BookAppointmentScreenState extends State<BookAppointmentScreen> {
     }
 
     // New Booking Flow
-    final pseudonym = _privacyService.createPseudonym();
+    var pseudonym = _privacyService.createPseudonym();
+    try {
+      final student = await _studentService.mine();
+      final configuredAlias = student?.alias?.trim() ?? '';
+      final privacy = await _privacyService.getPrivacySettings();
+      final savedAlias = configuredAlias.isNotEmpty
+          ? configuredAlias
+          : privacy.currentPseudonym.trim();
+      if (savedAlias.isNotEmpty) {
+        pseudonym = savedAlias;
+        if (student != null && configuredAlias.isEmpty) {
+          await _studentService.updateStudent(
+            studentId: student.uid,
+            data: {
+              'alias': savedAlias,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+          );
+        }
+      }
+    } catch (_) {}
     final passcode = _privacyService.createPasscode();
     setState(() => _isSaving = true);
     late final int duration;
