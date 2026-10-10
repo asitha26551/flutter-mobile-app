@@ -331,7 +331,7 @@ class _AppointmentCardState extends State<_AppointmentCard> {
           ],
           if (action != null || pending) ...[
             const SizedBox(height: 14),
-            if (action != null) action,
+            ?action,
             if (pending) ...[
               if (action != null) const SizedBox(height: 8),
               SizedBox(

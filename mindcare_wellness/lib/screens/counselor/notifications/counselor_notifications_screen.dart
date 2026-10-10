@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../models/notification_model.dart';
 import '../../../services/notification_service.dart';
+import '../../../widgets/common/error_message.dart';
+import '../../../widgets/common/loading.dart';
 import '../counselor_theme.dart';
 
 class CounselorNotificationsScreen extends StatefulWidget {
@@ -14,22 +16,54 @@ class CounselorNotificationsScreen extends StatefulWidget {
 
 class _CounselorNotificationsScreenState
     extends State<CounselorNotificationsScreen> {
+  final NotificationService _service = NotificationService();
   late final Stream<List<NotificationModel>> _notificationsStream;
 
   @override
   void initState() {
     super.initState();
-    _notificationsStream = NotificationService().mine();
+    _notificationsStream = _service.mine();
+  }
+
+  Future<void> _markAllRead() async {
+    try {
+      await _service.markAllRead();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not update notifications.')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Notifications')),
+    appBar: AppBar(
+      title: const Text('Notifications'),
+      actions: [
+        StreamBuilder<List<NotificationModel>>(
+          stream: _notificationsStream,
+          builder: (context, snapshot) {
+            final hasUnread = snapshot.data?.any((item) => !item.isRead) ?? false;
+            return IconButton(
+              tooltip: 'Mark all as read',
+              onPressed: hasUnread ? _markAllRead : null,
+              icon: const Icon(Icons.done_all_rounded),
+            );
+          },
+        ),
+      ],
+    ),
     body: StreamBuilder<List<NotificationModel>>(
       stream: _notificationsStream,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const ErrorMessage(
+            message: 'We could not load your notifications. Please try again.',
+          );
+        }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingWidget();
         }
         final notifications = snapshot.data ?? const <NotificationModel>[];
         if (notifications.isEmpty) {
@@ -40,7 +74,10 @@ class _CounselorNotificationsScreenState
           itemCount: notifications.length,
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) =>
-              _NotificationTile(item: notifications[index]),
+              _NotificationTile(
+                item: notifications[index],
+                service: _service,
+              ),
         );
       },
     ),
@@ -48,12 +85,35 @@ class _CounselorNotificationsScreenState
 }
 
 class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.item});
+  const _NotificationTile({required this.item, required this.service});
   final NotificationModel item;
+  final NotificationService service;
+
+  Future<void> _markRead(BuildContext context) async {
+    try {
+      await service.markRead(item.id);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not update the notification.')),
+      );
+    }
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    try {
+      await service.delete(item.id);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not delete the notification.')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) => InkWell(
-    onTap: item.isRead ? null : () => NotificationService().markRead(item.id),
+    onTap: item.isRead ? null : () => _markRead(context),
     borderRadius: BorderRadius.circular(14),
     child: Container(
       padding: const EdgeInsets.all(15),
@@ -96,6 +156,11 @@ class _NotificationTile extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+          IconButton(
+            tooltip: 'Delete notification',
+            onPressed: () => _delete(context),
+            icon: const Icon(Icons.delete_outline_rounded),
           ),
         ],
       ),
