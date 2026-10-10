@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/appointment_model.dart';
@@ -23,11 +22,7 @@ class AppointmentService {
 
   static String get _defaultBackendBaseUrl {
     if (_configuredBackendBaseUrl.isNotEmpty) return _configuredBackendBaseUrl;
-    // Android emulators reach the host machine through this bridge address.
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:3000';
-    }
-    return 'http://localhost:3000';
+    return 'https://mindcare-backend-eight.vercel.app';
   }
 
   final FirebaseFirestore _firestore;
