@@ -1,6 +1,11 @@
 import 'dotenv/config';
 import express from 'express';
-import { getApps, initializeApp, applicationDefault } from 'firebase-admin/app';
+import {
+  getApps,
+  initializeApp,
+  applicationDefault,
+  cert,
+} from 'firebase-admin/app';
 import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 
