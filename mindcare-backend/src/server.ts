@@ -4,10 +4,14 @@ import { getApps, initializeApp, applicationDefault } from 'firebase-admin/app';
 import { getAuth, type DecodedIdToken } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 
+const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
 const firebaseApp =
   getApps()[0] ??
   initializeApp({
-    credential: applicationDefault(),
+    credential: serviceAccountJson
+      ? cert(JSON.parse(serviceAccountJson))
+      : applicationDefault(),
   });
 
 const db = getFirestore(firebaseApp);
