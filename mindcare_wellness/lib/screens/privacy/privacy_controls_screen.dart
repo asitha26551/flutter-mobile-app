@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../../services/student_service.dart';
@@ -242,6 +243,18 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
       await _service.savePrivacySettings(
         updatedModel,
         uid: widget.initialUid,
+      );
+
+      final student = widget.initialUid == null
+          ? await _studentService.mine()
+          : await _studentService.get(widget.initialUid!);
+      if (student == null) throw StateError('Student profile not found.');
+      await _studentService.updateStudent(
+        studentId: student.uid,
+        data: {
+          'alias': _currentPseudonym.trim(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
       );
 
       if (mounted) {

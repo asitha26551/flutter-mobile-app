@@ -38,6 +38,26 @@ service cloud.firestore {
       match /privacy/{privacySettingsId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /emergency_contacts/{contactId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.name is string
+          && request.resource.data.phoneNumber is string
+          && request.resource.data.relationship is string;
+        allow update: if isOwner(userId)
+          && request.resource.data.name is string
+          && request.resource.data.phoneNumber is string
+          && request.resource.data.relationship is string
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'name', 'phoneNumber', 'relationship', 'updatedAt'
+          ]);
+        allow delete: if isOwner(userId);
+      }
+
+      match /settings/reminder_preferences {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     match /students/{userId} {
@@ -186,12 +206,18 @@ service cloud.firestore {
 
     match /notifications/{notificationId} {
       allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
-      allow create: if isAdmin();
+      allow create: if isAdmin()
+        || (isOwner(request.resource.data.userId)
+          && request.resource.data.type == 'reminder'
+          && request.resource.data.isRead == false
+          && request.resource.data.title == 'Test reminder'
+          && request.resource.data.body == 'Reminders are working. This is a test notification.')
+        || (isStudentAppointmentNotification(notificationId));
       allow update: if isSignedIn()
         && resource.data.userId == request.auth.uid
         && request.resource.data.userId == resource.data.userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
-      allow delete: if false;
+      allow delete: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /mood_entries/{entryId} {
@@ -254,6 +280,34 @@ service cloud.firestore {
 
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isStudentAppointmentNotification(notificationId) {
+      let notification = request.resource.data;
+      let appointmentPath = /databases/$(database)/documents/appointments/$(notification.relatedId);
+      return isStudent()
+        && notification.userId is string
+        && notification.relatedId is string
+        && notification.type in ['appointment', 'appointment_cancelled']
+        && notification.isRead == false
+        && ((notification.type == 'appointment'
+              && notification.title == 'New appointment request'
+              && notification.body == 'A student has requested a counseling session.')
+            || (notification.type == 'appointment_cancelled'
+              && notification.title == 'Appointment cancelled'
+              && notification.body == 'A student cancelled a counseling appointment.'))
+        && ((notification.type == 'appointment'
+              && notificationId == 'appointment_' + notification.relatedId + '_requested')
+            || (notification.type == 'appointment_cancelled'
+              && notificationId == 'appointment_' + notification.relatedId + '_cancelled'))
+        && existsAfter(appointmentPath)
+        && getAfter(appointmentPath).data.counselorId == notification.userId
+        && getAfter(appointmentPath).data.studentId == request.auth.uid
+        && ((notification.type == 'appointment'
+              && getAfter(appointmentPath).data.status == 'pending')
+            || (notification.type == 'appointment_cancelled'
+              && getAfter(appointmentPath).data.status == 'cancelled'
+              && getAfter(appointmentPath).data.cancelledBy == request.auth.uid));
     }
 
     function isStudent() {
