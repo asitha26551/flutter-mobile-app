@@ -24,7 +24,7 @@ class EmergencyService {
       .snapshots()
       .map((s) => s.docs.map(EmergencyContact.fromFirestore).toList());
 
-  /// CREATE.
+  /// ADD a new emergency contact.
   Future<void> add({
     required String name,
     required String phoneNumber,
