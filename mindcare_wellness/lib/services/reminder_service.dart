@@ -21,7 +21,7 @@ class ReminderService {
       .collection('settings')
       .doc('reminder_preferences');
 
-  /// READ (live). Emits the defaults if the student never saved anything.
+  /// READ (live). Emits the defaults if the student never saved it.
   Stream<ReminderPreferences> watch() =>
       _doc.snapshots().map(ReminderPreferences.fromFirestore);
 
