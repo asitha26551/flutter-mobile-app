@@ -29,7 +29,7 @@ class ReminderService {
   Future<ReminderPreferences> load() async =>
       ReminderPreferences.fromFirestore(await _doc.get());
 
-  /// CREATE / UPDATE.
+  /// CREATE / Edit 
   Future<void> save(ReminderPreferences preferences) =>
       _doc.set(preferences.toFirestore());
 
