@@ -36,7 +36,7 @@ class NotificationService {
     }
     await batch.commit();
   }
-
+/// delete a notification by its ID
   Future<void> delete(String notificationId) =>
       _firestore.collection('notifications').doc(notificationId).delete();
 }
